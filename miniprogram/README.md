@@ -201,11 +201,27 @@ canUserPay / canUserCancel / canUserConfirm / canUserRefund / canUserContact / c
 # 静态检查（10 类规则：页面清单 / 组件声明 / 裸 HEX / 字号阶梯 / wx.request 绕过 / 事件绑定 / 标签闭合 / 无障碍 …）
 node dipi/scripts/check-miniprogram.js
 
-# 逻辑冒烟测试（79 个用例：mock 契约同构 / 格式化 / 存储 / 页面逻辑 / WS）
+# 逻辑冒烟测试（80 个用例：mock 契约同构 / 格式化 / 存储 / 页面逻辑 / WS）
 node dipi/scripts/smoke-miniprogram.js
+
+# 契约核对（需服务端源码；同进程内起服务端，逐条比对最终契约，20 项）
+node dipi/scripts/verify-contract.js
 ```
 
-两个脚本都**不需要安装任何依赖**（纯 Node，无 npm 包）。
+三个脚本都**不需要安装任何依赖**（纯 Node，无 npm 包）。
+
+`verify-contract.js` 会在随机端口上拉起服务端，用客户端真实的 `utils/api.js` 发请求，
+核对：路径前缀只有 `/api/v1`、`services[]` 只含 `serviceId`、`availableSlots[]` 结构、
+订单 6 个操作位、`/me` 的 `orderStats` 分桶、筛选项来自 `filter-options`、
+收藏 `PUT` toggle 返回 `favorited`、价格筛选单位一致。
+
+> **兼容说明**：服务端不同版本在少数字段上有别名，客户端做了**双向兼容**（不写第二套映射）：
+> | 字段 | 服务端可能下发 | 客户端取值 |
+> |---|---|---|
+> | 筛选项·目的地 | `cities` / `destinations` | 两者都取 |
+> | 价格区间 | `min`/`max`（元）/ `minAmount`/`maxAmount`（分） | 都保留，查询用「元」 |
+> | 订单统计·退款格 | `refunding` / `refunded` | `refunding` 优先，`refunded` 兜底 |
+> | 详情信封 | `data` / `data.guide` | 两者都取 |
 
 ---
 

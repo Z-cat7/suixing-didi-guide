@@ -44,8 +44,7 @@ Page({
      */
     orderStatItems: ORDER_STAT_BUCKETS.map(function (b) {
       return { code: b.code, label: b.label, count: 0 };
-    }),
-    /** 设置 */
+    }),    /** 设置 */
     settings: {
       notifyEnabled: true,
       notifyOrder: true,
@@ -132,10 +131,7 @@ Page({
         }
         const counts = data.orderCounts || {};
         // 订单统计格：数量直接取服务端下发的 orderStats 展示分桶（前端不自行聚合）
-        const stats = data.orderStats || {};
-        const statItems = ORDER_STAT_BUCKETS.map(function (b) {
-          return { code: b.code, label: b.label, count: stats[b.code] || 0 };
-        });
+        const statItems = this.buildOrderStatItems(data.orderStats || {});
         const realNameText = data.realNameVerified ? '已实名认证' : '还未实名认证';
         self.setData({
           loading: false,
@@ -157,6 +153,21 @@ Page({
           isLoggedIn: !!getApp().globalData.isLoggedIn,
         });
       });
+  },
+
+  /**
+   * 构建订单统计格（数量来自服务端 orderStats，前端不按状态枚举自行聚合）
+   * @param {object} stats 服务端下发的 orderStats
+   * @returns {array} [{ code, label, count }]
+   */
+  buildOrderStatItems: function (stats) {
+    const source = stats || {};
+    return ORDER_STAT_BUCKETS.map(function (b) {
+      // code 优先；服务端用别名下发时（如 refunded ↔ refunding）走 alias 兜底
+      const count =
+        source[b.code] !== undefined ? source[b.code] : b.alias ? source[b.alias] || 0 : 0;
+      return { code: b.code, label: b.label, count: count };
+    });
   },
 
   /**

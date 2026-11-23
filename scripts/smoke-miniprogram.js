@@ -392,9 +392,43 @@ test('契约：订单对象含 serviceId 与 slotId，且无 serviceItemId', fun
 test('契约：mock 用户含 orderStats 展示分桶（服务端聚合，非订单状态）', function () {
   const res = mock.handle('GET', '/me', {}, {});
   assert.ok(res.data.orderStats, 'mock /me 必须含 orderStats');
-  ['pendingPayment', 'ongoing', 'pendingConfirm', 'refunding'].forEach(function (k) {
+  ['pendingPayment', 'ongoing', 'pendingConfirm'].forEach(function (k) {
     assert.strictEqual(typeof res.data.orderStats[k], 'number', '缺少分桶 ' + k);
   });
+  // 退款格：refunding / refunded 语义相同，至少要给一个
+  assert.ok(
+    res.data.orderStats.refunding !== undefined || res.data.orderStats.refunded !== undefined,
+    '缺少退款分桶'
+  );
+});
+
+test('契约：订单统计格读服务端 orderStats（不按状态枚举自行聚合）', function () {
+  const p = loadPage('pages/profile/profile.js');
+  // 服务端用 refunded 命名下发退款格
+  const items = p.buildOrderStatItems({
+    pendingPayment: 2,
+    ongoing: 3,
+    pendingConfirm: 1,
+    refunded: 5,
+  });
+  assert.strictEqual(items.length, 4);
+  assert.strictEqual(items[0].count, 2, '待支付');
+  assert.strictEqual(items[1].count, 3, '进行中');
+  assert.strictEqual(items[2].count, 1, '待确认');
+  assert.strictEqual(items[3].count, 5, '退款格应能读 refunded 别名');
+
+  // 服务端用 refunding 命名下发同样兼容
+  const items2 = p.buildOrderStatItems({
+    pendingPayment: 0,
+    ongoing: 0,
+    pendingConfirm: 0,
+    refunding: 7,
+  });
+  assert.strictEqual(items2[3].count, 7, '退款格应能读 refunding');
+
+  // 服务端缺字段时降级为 0，不报错
+  const items3 = p.buildOrderStatItems({});
+  assert.strictEqual(items3[3].count, 0);
 });
 
 test('契约：mock 服务项元素含 serviceId / name / type / priceAmount / durationHours', function () {

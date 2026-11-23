@@ -187,15 +187,16 @@ const CANCEL_REASON = [
  * ---------------------------------------------------------------------------
  * 【重要】这些 code 是**服务端聚合后的展示分桶**，不是订单状态枚举：
  *   - `ongoing` = accepted + inService（进行中）
- *   - `refunding` = refunding + refunded（退款相关）
+ *   - 退款格 = refunding + refunded（服务端可能下发 `refunded` 或 `refunding`，
+ *     两者语义相同；`alias` 用于兼容两种命名，客户端按 `code` 优先、`alias` 兜底取值）
  * 数量由服务端在 GET /api/v1/me 的 `orderStats` 字段中下发，
  * 前端**只渲染，不按订单状态自行聚合**。
  */
 const ORDER_STAT_BUCKETS = [
-  { code: 'pendingPayment', label: '待支付' },
-  { code: 'ongoing', label: '进行中' },
-  { code: 'pendingConfirm', label: '待确认' },
-  { code: 'refunding', label: '已退款' },
+  { code: 'pendingPayment', label: '待支付', alias: '' },
+  { code: 'ongoing', label: '进行中', alias: '' },
+  { code: 'pendingConfirm', label: '待确认', alias: '' },
+  { code: 'refunding', label: '已退款', alias: 'refunded' },
 ];
 
 /** 存储 key（统一 dipi: 前缀 + 冒号分层） */
