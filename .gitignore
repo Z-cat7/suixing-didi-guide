@@ -22,3 +22,6 @@ Thumbs.db
 # 系统
 ehthumbs.db
 Thumbs.db
+
+# 交付打包产物
+*.zip

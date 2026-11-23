@@ -1,11 +1,12 @@
 # 随行（dipi）· 小程序端体验设计规范（UX Spec）
 
-> 文档版本：**v1.0** · Phase 2 体验规范 · 负责人：**优希**（体验设计专家）
+> 文档版本：**v1.10** · Phase 2 体验规范 · 负责人：**优希**（体验设计专家）
 > 视觉唯一来源：`docs/01-visual-design.md` + `styles/tokens.wxss` + `styles/components.wxss`
 > 覆盖范围：信息架构 / 交互流程 / 状态态 / 响应式 / 无障碍 / 防错与降级
 > **本文档不定义颜色、字阶、间距的数值**——一律引用 `var(--dipi-*)` 令牌名；数值以 WXSS 为唯一真相源。
 > 覆盖页面：**8 个** = 6 个必需页（首页 / 搜索页 / 聊天页 / 订单页 / 消息页 / 用户主页）＋ 2 个转化主路径二级页（**地陪详情页** / **下单确认页**），TabBar 4 项。
 > 修订记录：**v1.1（IA 裁决后）** — IA-01 由「半屏面板」改为**独立二级页**；新增 §B.7 地陪详情页、§B.8 下单确认页。详见 §A.2.1。
+> **v1.10（Phase 2 最终定稿）** — ① 新增**全局约定**「展示层/分桶层命名与接口层参数值不保证同名，不同名者必须显式落表」；② §C.2.2 补「订单页 Tab ↔ `status` 参数」映射表（**分桶名 ≠ 参数值**）；③ §B.4.2 流程 1 修正 Tab 集合（7 → **6 个**，与实现一致）并补 status 传参规则；④ §G 增 G-99；⑤ §B.6.3 澄清「订单页=完整状态视图 / 我的页=待办清单」的集合差异。
 > **v1.9（Phase 2 定稿）** — ① **徽章映射定稿** = Phase 1 v1.1 §6.10（已裁决，待确认块已关闭）；② 新增**「§6.10 为视觉层权威、§A.3.3 只是转述、绝不可反向按 §A.3.3 改 CSS」**的单向依赖声明；③ 新增**「客户端白名单分工」**块（8 项可能下发集合 / 6 项实际下发 / 9 项 CSS 实际类 / **双向校验、不断言固定数量**）；④ §B.4.3 补 `statusBadge` / `statusText` 字段行；⑤ G-88 强化为双向校验口径。
 > **v1.8（对齐已落地的视觉/契约/服务端三层）** — ① **删除 `statusKey`**（服务端已加守卫断言不下发，契约 §8.1 已删）；② **§A.3.3 徽章表对齐已落地状态**（= Phase 1 §6.10 新 6 级体系 + `components.wxss` 9 类 + `statusMap.js`），并保留「2 行待 team-lead 重新确认」的差异对照；③ **白名单改为动态扫 CSS**（9 值），标注 `confirmed`（预留给非订单徽章）/ `dispute`（纠纷）/ `refund`（已废弃别名）的用途；④ 版本标注同步为「已落地」。
 > **v1.7（对齐 `03-api-contract.md` v2.0 实测契约）** — ① **首页补 `banners` 模块**（A.4 由 7 段扩为 **8 段**，Banner 置于搜索框之后，只展示 1 张不自动轮播）+ `hotDestinations`/`guideTotal`/`cityTotal`/`unreadCount`；② **搜索查询参数全部改名对齐契约**：`city`→**`destination`**、`priceMin`→**`minPrice`**、`priceMax`→**`maxPrice`**、`minRating`→**`rating`**、`sortBy`→**`sort`**（默认 `recommend`），`filterOptions.cities`→**`destinations`**、`priceRanges` 元素改为**分+元双份**、新增 `priceRange`；③ **金额单位警示**（查询参数=元 / 响应体=分）；④ `pageSize` **各端点默认值不同，一律以契约为准**（新增对照表）；⑤ 地陪摘要/详情补 `priceMaxAmount`/`priceUnitText`/`serviceTypes`/`serviceTypeName`/`verified`/`identityVerified`/`location`/`languagesText`/`status`/`favoritesCount`；⑥ 手机号改 **6–20 位数字**（原写 11 位）；⑦ 错误码 `40001`→**`42200`**、`40901`→**`40900`**；⑧ 明确**服务端算总价**，前端传的金额一律被忽略。
@@ -781,10 +782,10 @@
 
 1. `onLoad` 读 `storage.dipi:nav:order`（可能是 `{tab, highlightOrderId}`）→ 消费后**立即删除该 key**（防重复消费）。
 2. `onShow` **总是**重新拉列表（订单状态是最易变的数据）。
-3. 状态 Tab（横向滚动 chip）：`all / pendingPayment / pendingAccept / accepted+inService / pendingConfirm / completed / refunding`。
-   - 合并规则：`accepted` 与 `inService` 合并为「进行中」；`cancelled`/`closed`/`refunded` 合并进「已结束」（在「全部」中可见，其他 Tab 不单列）。
+3. 状态 Tab（横向滚动 chip）共 **6 个**：`all` 全部 / `pendingPayment` 待支付 / `ongoing` 进行中 / `pendingConfirm` 待确认 / `completed` 已完成 / `refunding` 退款。
+   - **订单页 = 完整状态视图**（含「已完成」）；「我的」页 = **待办清单**（4 格，不含「已完成」，见 §B.6.3）—— 两者集合不同是**有意的**。
    - 每个 Tab 上带**数量角标**（数字用 `.dipi-badge--sm`）。
-4. 切换 Tab → `page=1` 重拉 → 列表滚动回顶部 → **保留 Tab 选择**。
+4. 切换 Tab → **`status` 参数按 §C.2.2 的映射表传**（⚠️ **不要直接传分桶名**：`ongoing`→`accepted,inService`、`refunding`→`refunding,refunded`；直传分桶名会得 `422`、该 Tab 列表空白）→ `page=1` 重拉 → 列表滚动回顶部 → **保留 Tab 选择**。
 5. Tab 行**吸顶**（`--dipi-z-sticky`），滚动时保持在导航栏下方。
 
 #### 流程 2：进入订单详情
@@ -1145,7 +1146,7 @@
 > | `refunded` | 退款 | `refunding` + `refunded` | 售后流程中 + 已退款 |
 >
 > **硬约束（写进契约 · 服务端聚合逻辑保证）**：每笔订单**有且仅落入一格**；四格数字之和 ≤ 订单总数。
-> **不纳入四格**的状态：`pendingAccept`（待接单）、`cancelled`（已取消）、`closed`（已关闭）、`completed`（已完成）——它们不是「需要用户处理」的待办，只在「全部」Tab 里可见。
+> **不纳入四格**的状态：`pendingAccept`（待接单）、`cancelled`（已取消）、`closed`（已关闭）、`completed`（已完成）——它们不是「需要用户处理」的待办。**在订单页仍可见**（「全部」与「已完成」Tab 里可见），只是不占「我的」页的 4 格。
 >
 > ⚠️ **键名与标签是两回事**：**键名 `refunded`**（与服务端字段、与状态枚举里的 `refunded` 同名，前端心智负担最小；已裁决）；**用户可见标签用「退款」** —— 因为这一格同时装「退款中 + 已退款」，标签若写「已退款」会与实际内容不符（用户看到「已退款 1」，实际那笔可能还在退）。契约层跟枚举对齐，体验层用中性词覆盖两种状态。
 > ⚠️ **字段名以服务端为准**：`GET /api/v1/me` 下发 `orderStats`（客户端 `mock.js` / `profile.js` 亦按此渲染），客户端**只读、不自算**。
@@ -1665,6 +1666,15 @@ WS 通道（可选/兜底）：仅在 HTTP 通道不可用时降级使用
 
 ### C.2.1 总体规则
 
+> 🧭 **全局约定：展示层 / 分桶层的命名，与接口层的参数值**不保证同名**。
+> **凡是两者不同的，必须在本文档显式落表**。已知的三类：
+> ① **分桶键 ↔ 查询参数值**（订单 Tab 的 `ongoing` → `accepted,inService`，见 §C.2.2）
+> ② **查询参数单位 ↔ 响应体单位**（`minPrice`/`maxPrice` 用**元**，`xxxAmount` 用**分**）
+> ③ **样式类名 ↔ 状态语义**（`statusBadge` 的 `review`/`refunding` 是视觉决策，与状态枚举不同名）
+> **新增分桶 / 新增 Tab / 新增筛选维度时，先检查是否需要落一条映射表。**
+>
+> ⚠️ 这类「长得像合法值、但语义不同」的映射**不会在类型检查或枚举校验时报错** —— 只会安静地返回 422 或空列表，因此必须靠文档落表来防。
+
 1. **二级页之间**（搜索 ⇄ 聊天、首页 → 搜索、**首页/搜索 → 地陪详情 P7 → 下单确认 P8**）：用 **URL query**，键名 camelCase，见下表。
 2. **TabBar 页之间**（任意 → 订单页 / 我的）：用 **`storage` + `switchTab`**，因为 `switchTab` 不能带 query。
    - 统一 key：`dipi:nav:order`，值 `{ tab, highlightOrderId? }`，**消费后立即删除**。
@@ -1701,8 +1711,27 @@ WS 通道（可选/兜底）：仅在 HTTP 通道不可用时降级使用
 | **聊天页 P3** | **下单确认页 P8** | **URL query** | **`conversationId`** | **string** | **来源会话，服务端据此把订单与会话关联** |
 | **下单确认页 P8** | **订单页 P4** | **storage** | **`dipi:nav:order`** | **object** | **`{ tab:'all', highlightOrderId }`，支付成功后 `switchTab`** |
 | **下单确认页 P8** | **下单确认页 P8（自身）** | **storage** | **`dipi:draft:order`** | **object** | **下单草稿，二次进入时回填（见 F-19）** |
+| **订单页 P4** | **订单页 P4（自身 Tab 切换）** | **URL query** | **`status`** | **string** | **订单列表查询参数：逗号分隔的**状态枚举**（只接受 camelCase）。⚠️ **不是分桶名**，见下方映射表 |
 
 > **`guideId` / `serviceId` 的传递链是单向的**：`guideId` 在每一次跨页跳转中都**必须携带**（详情页与下单页都要靠它重新拉数据）；`serviceId` **只在 P7 → P8 这一次**携带，P7 自身不消费它。
+
+> ⚠️ **⚠️ 分桶名 ≠ 查询参数值（订单页 Tab ↔ `status` 参数映射）**
+>
+> 订单页的 Tab 是**面向用户的分桶**，而 `GET /api/v1/orders?status=` **只接受逗号分隔的状态枚举**（camelCase，只接受 10 态枚举内的值）。
+> **直接把分桶名当参数发 → 服务端返回 `422` → 该 Tab 列表空白**（不会报类型错、不会在校验期被发现，只会安静地空）。
+>
+> | Tab（用户可见） | 分桶键（前端内部） | `status` 参数值 |
+> |---|---|---|
+> | 全部 | `all` | **不传该参数**（空串） |
+> | 待支付 | `pendingPayment` | `pendingPayment` |
+> | **进行中** | `ongoing` | **`accepted,inService`** |
+> | 待确认 | `pendingConfirm` | `pendingConfirm` |
+> | 已完成 | `completed` | `completed` |
+> | **退款** | `refunding` | **`refunding,refunded`** |
+>
+> ⚠️ **「进行中」与「退款」两格的「分桶键 ≠ 参数值」**，是本项目最容易踩的映射坑（`ongoing` 长得像合法 camelCase 但**不在 10 态枚举里**，因此不会触发任何枚举校验）。
+>
+> ⚠️ **同一分桶在两个页面的标签目前不一致**：订单页 Tab 用「**进行中**」，「我的」页 4 格用「**服务中**」（见 §B.6.3）。两者指的是**同一批订单**（`accepted + inService`），建议统一为「**服务中**」（§A.3 统一命名表已定此词）；客户端为一行文案改动。**本表按订单页现状写「进行中」，以实现为准。**
 
 ### C.2.3 传参反模式（禁止）
 
@@ -2118,7 +2147,7 @@ flowchart TD
 - [ ] G-93 **`clientMessageId` 生命周期**：用户主动发起一次发送 → **新生成**；同一次发送的失败重发（感叹号 / 超时重试）→ **复用同一个**；用户再次主动发送同样内容 → **新生成**（故服务端按 `clientMessageId` 幂等不会吞掉用户的新消息）
 - [ ] G-90 `utils/ws.js` 保留**防御性归一** `const payload = msg.payload ?? msg.data ?? {};`（兼容服务端旧 `{ type, data }` 信封，**不得删除**）；WS 不可用时**直接走 HTTP**，发消息 / 收消息 / 读历史三条链路**功能不降级**
 
-## G.4 订单页（12 条）
+## G.4 订单页（13 条）
 
 - [ ] G-38 订单状态枚举共 **10 个**，与 §D.3.1 完全一致；前端**不硬编码**状态→按钮映射，一律读 `canUserPay/canUserCancel/canUserConfirm/canUserRefund/canUserContact`
 - [ ] G-39 `statusText` 由服务端下发，前端**不自行翻译**状态文案
@@ -2132,6 +2161,7 @@ flowchart TD
 - [ ] G-88 徽章白名单按**双向校验**执行、**🚫 不断言固定数量**：① **CSS ⊆ 白名单**（CSS 里每个状态类都要有白名单项）；② **服务端下发 ⊆ CSS**（每个下发值都必须能在 `components.wxss` 找到 `.dipi-badge--xxx`）；白名单取「服务端**可能下发**的取值集合（8 项，含 `dispute` 预留与 `refund` 废弃别名）」，**动态扫 CSS 得出、不硬编码个数**，视觉层加预留类不会误报；服务端下发未知 `statusBadge` → 降级 `.dipi-badge--closed` + 显示 `statusText`，**不得渲染出不存在的类**（否则徽章丢失底色、视觉全错）；⚠️ `refund`（已废弃，与 `dispute` 同色）与 `refunding`（橙）**只差 3 个字母但语义相反**，新代码**一律用 `dispute`**
 - [ ] G-89 订单状态徽章**必须同时渲染 `statusText` 文字**（不只渲染颜色块、不只用 `statusTone`）；灰度/色弱模式下仍能区分全部 10 种状态（无障碍检查项 §E.3 A-21）
 - [ ] G-94 `inService` 状态下服务端下发 `allowedActions` 含 `confirm` 时，订单卡显示「确认完成」次按钮（迁移 **T24** 兜底通道），**走与 `pendingConfirm` 完全相同的二次确认弹层**；用户不会因地陪漏点「结束服务」而被卡在「服务中」
+- [ ] G-99 订单页 Tab 切换按 **§C.2.2 映射表**传 `status`（逗号分隔的**状态枚举**），**🚫 不直接传分桶名** —— `ongoing`→`accepted,inService`、`refunding`→`refunding,refunded`；直传分桶名会得 `422`、该 Tab 列表空白（分桶名长得像合法 camelCase，不会触发任何枚举校验，只能靠映射表防）
 
 ## G.5 地陪详情页 P7（8 条）
 

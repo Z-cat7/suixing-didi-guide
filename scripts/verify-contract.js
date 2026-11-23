@@ -73,23 +73,37 @@ function startServer() {
  * @param {number} port 端口
  */
 function installWx(port) {
+  // 内存 storage：api.js 的 token 注入依赖 getStorageSync/dipi:user:token。
+  // 若永远返回 ''，getFilterOptions() 会走 request.js 的 ensureToken → doLogin →
+  // wx.login()，而旧版 login mock 从不触发 success 回调 → Promise 永久 pending（脚本挂死）。
+  // 这里让 storage 真正可读写，且 login 正确触发 success 并回一个 code，链路即可自洽。
+  const store = {};
   global.wx = {
-    getStorageSync: function () { return ''; },
-    setStorageSync: function () {},
-    removeStorageSync: function () {},
+    getStorageSync: function (k) { return Object.prototype.hasOwnProperty.call(store, k) ? store[k] : ''; },
+    setStorageSync: function (k, v) { store[k] = v; },
+    removeStorageSync: function (k) { delete store[k]; },
     showToast: function () {},
-    login: function () { return { success: function () {} }; },
+    login: function (o) { if (o && typeof o.success === 'function') o.success({ code: 'mock-user-001' }); },
     request: function (o) {
       const data = JSON.stringify(o.data || {});
       // 客户端传的是完整 URL（BASE_URL + /api/v1 + path），这里取出 path 部分
       const u = new URL(o.url);
+      const method = o.method || 'GET';
+      const hasBody = method !== 'GET' && method !== 'HEAD';
+      // ⚠️ 只对有 body 的请求设 Content-Length。
+      //    GET 若带 Content-Length:2（"{}"）却不写 body，Node HTTP 服务端会一直等 2 字节 → 永久挂起。
+      const headers = Object.assign({}, o.header || {});
+      if (hasBody) headers['Content-Length'] = Buffer.byteLength(data);
       const r = http.request(
         {
-          host: u.hostname,
-          port: u.port,
+          host: '127.0.0.1',
+          // ⚠️ 必须用**本次进程内启动的服务端端口**，
+          //    不能用 URL 里的 3000（那是 config 里的默认端口，可能有另一个旧实例在跑，
+          //    会导致「测的是旧服务端」这种假绿）
+          port: port,
           path: u.pathname + u.search,
-          method: o.method || 'GET',
-          headers: Object.assign({}, o.header || {}, { 'Content-Length': Buffer.byteLength(data) }),
+          method: method,
+          headers: headers,
         },
         function (resp) {
           let b = '';
@@ -104,7 +118,7 @@ function installWx(port) {
         }
       );
       r.on('error', function (e) { o.fail({ errMsg: e.message }); });
-      if (o.method && o.method !== 'GET') r.write(data);
+      if (hasBody) r.write(data);
       r.end();
     },
     connectSocket: function () {
@@ -167,6 +181,9 @@ async function main() {
     r.on('error', reject); r.write(s); r.end();
   });
   const H = { Authorization: 'Bearer ' + lr.data.token };
+  // 让客户端 request.js 链路也能读到 token：真实小程序登录后 storage 里必有 token，
+  // 否则 getFilterOptions() 会触发 ensureToken → doLogin（旧 mock 在此死锁）。
+  require(path.join(MP_ROOT, 'utils', 'storage.js')).setToken(lr.data.token);
 
   console.log('');
   console.log('── 路径前缀（单 /api/v1）──');
