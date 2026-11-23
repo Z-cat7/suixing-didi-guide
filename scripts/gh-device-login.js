@@ -69,13 +69,23 @@ function writeHostsYaml(token) {
 }
 
 async function main() {
-  console.log('步骤 1/3：申请设备码（代理不稳定，最多重试 120 次）…');
-  const codeJson = await postForm('https://github.com/login/device/code', {
-    client_id: CLIENT_ID,
-    scope: SCOPE,
-  }, 120, 8000);
-  const { device_code: deviceCode, user_code: userCode, verification_uri: uri, interval } = codeJson;
-  if (!deviceCode) throw new Error('设备码申请失败：' + JSON.stringify(codeJson));
+  let deviceCode, userCode, uri, interval;
+  if (process.env.GH_DEVICE_CODE) {
+    // 分步模式：设备码已由外部申请好并通过环境变量传入，跳过申请直接轮询
+    deviceCode = process.env.GH_DEVICE_CODE;
+    userCode = process.env.GH_USER_CODE || '(见外部输出)';
+    uri = 'https://github.com/login/device';
+    interval = 5;
+    console.log('步骤 1/3：使用外部传入的设备码，跳过申请。');
+  } else {
+    console.log('步骤 1/3：申请设备码（代理不稳定，最多重试 120 次）…');
+    const codeJson = await postForm('https://github.com/login/device/code', {
+      client_id: CLIENT_ID,
+      scope: SCOPE,
+    }, 120, 8000);
+    ({ device_code: deviceCode, user_code: userCode, verification_uri: uri, interval } = codeJson);
+  }
+  if (!deviceCode) throw new Error('设备码申请失败');
 
   console.log('\n========================================');
   console.log('  请打开浏览器完成授权：');
