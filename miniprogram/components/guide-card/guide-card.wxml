@@ -1,0 +1,48 @@
+<!--
+  guide-card · 地陪卡片
+  【铁律】卡片内不放实心按钮（IA-04），整张卡可点
+-->
+<view
+  class="dipi-guide-card {{isResting ? 'is-disabled' : ''}} {{horizontal ? 'guide-card--horizontal' : ''}}"
+  hover-class="is-pressed"
+  hover-stay-time="80"
+  bindtap="onTap"
+  aria-role="button"
+  aria-label="{{ariaLabel}}"
+>
+  <view class="dipi-guide-card__avatar">
+    <image
+      wx:if="{{guide.avatarUrl}}"
+      class="guide-card__img"
+      src="{{guide.avatarUrl}}"
+      mode="aspectFill"
+      lazy-load="{{true}}"
+      aria-hidden="true"
+    />
+    <view wx:else class="dipi-guide-card__avatar-fallback" aria-hidden="true">{{guide.name ? guide.name.charAt(0) : '伴'}}</view>
+    <view wx:if="{{guide.isResting}}" class="dipi-guide-card__offline">休息中</view>
+  </view>
+
+  <view class="dipi-guide-card__body">
+    <view class="dipi-guide-card__name">{{guide.name}}</view>
+    <view class="dipi-guide-card__title">{{guide.title}}</view>
+
+    <view wx:if="{{guide.rating}}" class="dipi-guide-card__rating">
+      <rating-stars rating="{{guide.rating}}" size="sm" />
+      <text class="dipi-guide-card__rating-num">{{guide.rating}}</text>
+      <text wx:if="{{guide.ratingCount}}" class="dipi-guide-card__rating-count">({{guide.ratingCount}} 条评价)</text>
+    </view>
+
+    <view wx:if="{{guide.tags && guide.tags.length}}" class="dipi-guide-card__tags" aria-hidden="true">
+      <block wx:for="{{guide.tags}}" wx:key="*this">
+        <text wx:if="{{index < 3}}" class="dipi-guide-card__tag">{{item}}</text>
+      </block>
+      <text wx:if="{{guide.tags.length > 3}}" class="dipi-guide-card__tag dipi-guide-card__tag--more">+{{guide.tags.length - 3}}</text>
+    </view>
+  </view>
+
+  <view class="dipi-guide-card__aside">
+    <price-tag amount="{{guide.priceAmount}}" origin-amount="{{guide.priceOriginAmount}}" unit="{{guide.priceUnit}}" />
+    <text wx:if="{{guide.city}}" class="dipi-guide-card__location">{{guide.city}}<text wx:if="{{guide.district}}"> · {{guide.district}}</text></text>
+  </view>
+</view>

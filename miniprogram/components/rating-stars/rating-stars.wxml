@@ -1,0 +1,17 @@
+<!--
+  rating-stars · 评分星级
+  视觉类来自 styles/components.wxss（.dipi-stars）
+  半星实现：外层空星 + 内层 50% 裁切填充
+-->
+<view class="dipi-stars {{size === 'lg' ? 'dipi-stars--lg' : ''}}" aria-hidden="true">
+  <block wx:for="{{stars}}" wx:key="index">
+    <view wx:if="{{item.full}}" class="dipi-stars__item dipi-stars__item--full">★</view>
+    <view wx:elif="{{item.half}}" class="dipi-stars__item dipi-stars__item--half">
+      <view class="dipi-stars__half">
+        <text class="dipi-stars__half-icon">★</text>
+      </view>
+      <text class="dipi-stars__half-icon">★</text>
+    </view>
+    <view wx:else class="dipi-stars__item">★</view>
+  </block>
+</view>

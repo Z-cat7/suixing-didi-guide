@@ -1,0 +1,25 @@
+<!--
+  load-more · 触底加载
+  status: idle（不显示）/ loading（加载中）/ nomore（没有更多了）/ error（加载失败可重试）
+-->
+<view wx:if="{{status === 'loading'}}" class="load-more">
+  <view class="load-more__spinner dipi-btn__loading load-more__spinner--dark"></view>
+  <text class="load-more__text">加载中…</text>
+</view>
+
+<view wx:elif="{{status === 'nomore'}}" class="load-more">
+  <text class="load-more__text">— 没有更多了 —</text>
+</view>
+
+<view wx:elif="{{status === 'error'}}" class="load-more">
+  <text class="load-more__text load-more__text--error">加载更多失败，点击重试</text>
+  <view
+    class="load-more__retry"
+    hover-class="is-pressed"
+    bindtap="onRetry"
+    aria-role="button"
+    aria-label="重试加载更多结果"
+  >
+    重试
+  </view>
+</view>

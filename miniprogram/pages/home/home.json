@@ -1,0 +1,12 @@
+{
+  "navigationBarTitleText": "随行",
+  "enablePullDownRefresh": true,
+  "backgroundTextStyle": "dark",
+  "usingComponents": {
+    "guide-card": "/components/guide-card/guide-card",
+    "order-status-badge": "/components/order-status-badge/order-status-badge",
+    "section-header": "/components/section-header/section-header",
+    "empty-state": "/components/empty-state/empty-state",
+    "skeleton-card": "/components/skeleton-card/skeleton-card"
+  }
+}

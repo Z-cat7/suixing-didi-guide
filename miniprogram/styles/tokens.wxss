@@ -1,0 +1,422 @@
+/**
+ * ============================================================================
+ * 随行 dipi · 小程序端设计令牌 (Design Tokens)
+ * ----------------------------------------------------------------------------
+ * 主题：浅色 (light) 固定，无深色皮肤
+ * 基准：375px 逻辑宽度 = 750rpx，1px = 2rpx
+ * 规范来源：docs/01-visual-design.md
+ *
+ * 【使用方式】
+ *   app.wxss 顶部（WXSS 的 @import 只能在 app.wxss 中生效）：
+ *     @import "styles/tokens.wxss";
+ *     @import "styles/components.wxss";
+ *
+ * 【纪律】
+ *   1. 页面/组件里禁止出现裸 HEX、裸 px 间距、阶梯外字号，统一取 var()
+ *   2. 颜色只能来自本文件 :root 定义
+ *   3. 所有可点击元素渲染盒子 ≥ 88rpx × 88rpx
+ * ============================================================================
+ */
+
+page {
+  /* 全局兜底：正文色与页面底色（浅色固定） */
+  background-color: var(--dipi-ink-100);
+  color: var(--dipi-ink-900);
+  font-family: var(--dipi-font-sans);
+  font-size: var(--dipi-fs-body);
+  line-height: var(--dipi-line-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+view, text, button, input, textarea, scroll-view {
+  box-sizing: border-box;
+}
+
+/* ==========================================================================
+ * 1. 色板 — 品牌主色：松绿 (品牌 / 主按钮 / 品牌图形)
+ * ========================================================================== */
+:root {
+  /* -- 主色阶：brand-600 为主色，按下用 brand-700 ---------------------- */
+  --dipi-brand-900: #063B33;   /* 品牌最深，深色导航底 / 渐变端点 */
+  --dipi-brand-800: #0A4F47;   /* 品牌深，按下态描边色 */
+  --dipi-brand-700: #0C5F55;   /* 深底文字、描边按钮文字（白字 7.54:1） */
+  --dipi-brand-600: #0F6F63;   /* ★ 主色：主按钮底 / 品牌图标（白字 6.04:1） */
+  --dipi-brand-500: #2A8577;   /* 品牌图形 / 图标描边（白底 4.45:1） */
+  --dipi-brand-300: #7FB8AC;   /* 品牌浅描边、装饰线（禁止用于文字） */
+  --dipi-brand-100: #E6F2F0;   /* 浅底：选中 chip 底 / tag 底 / 提示条底 */
+  --dipi-brand-50:  #F1F8F7;   /* 极浅底：骨架屏底 / 次级卡片底 */
+
+  /* -- 强调色阶：陶土红（仅用于 价格 / 评分星 / 已选中价格类 chip） ------- */
+  --dipi-accent-700: #9E3D1C;  /* 浅红底上的文字（accent-100 上 6.04:1） */
+  --dipi-accent-600: #C24C26;  /* ★ 价格数字主色（白底 4.82:1） */
+  --dipi-accent-500: #E06537;  /* 评分星形填充（图形 3.45:1，禁止用于文字） */
+  --dipi-accent-100: #FDF1EB;  /* 价格高亮块底 / 已选中价格 chip 底 */
+  --dipi-accent-50:  #FEF7F3;  /* 价格区极浅底 */
+
+  /* -- 功能色：成功（绿） --------------------------------------------- */
+  --dipi-success-700: #0E6B3B; /* 成功态文字（success-100 上 5.82:1） */
+  --dipi-success-600: #157F45; /* 成功态实心底（白字 5.06:1） */
+  --dipi-success-100: #E7F4EC; /* 成功态浅底 */
+
+  /* -- 功能色：警告（琥珀） ------------------------------------------- */
+  --dipi-warning-700: #8A4E06; /* 警告文字（warning-100 上 6.02:1） */
+  --dipi-warning-600: #9A5B08; /* 警告实心底（白字 5.42:1） */
+  --dipi-warning-100: #FDF3E3; /* 警告浅底 */
+
+  /* -- 功能色：错误（红） --------------------------------------------- */
+  --dipi-error-700: #B02D23;   /* 错误文字（error-100 上 5.74:1） */
+  --dipi-error-600: #C4362B;   /* 错误实心底（白字 5.37:1） */
+  --dipi-error-100: #FDEEEC;   /* 错误浅底：输入框错误态 / 错误横幅 */
+
+  /* -- 功能色：信息（蓝，仅系统通知 / 处理中） ------------------------ */
+  --dipi-info-700: #16538F;    /* 信息文字（info-100 上 6.97:1） */
+  --dipi-info-600: #1B6EC2;    /* 信息实心底（白字 5.18:1） */
+  --dipi-info-100: #EAF2FC;    /* 信息浅底 */
+
+  /* -- 中性色阶（带极轻绿调，避免死灰） ------------------------------- */
+  --dipi-ink-900: #1A1D1C;    /* ★ 正文/标题主色，非纯黑（白底 16.98:1） */
+  --dipi-ink-700: #3D4341;    /* 次要正文（白底 10.11:1） */
+  --dipi-ink-500: #69716E;    /* 辅助说明/时间戳（白底 5.01:1） */
+  --dipi-ink-400: #8A918E;    /* 仅禁用态文字与图标（3.22:1，禁用豁免） */
+  --dipi-ink-300: #C7CCCA;    /* 输入框描边 / 占位块 / 头像底 */
+  --dipi-ink-200: #E4E8E6;    /* 分割线 */
+  --dipi-ink-100: #F2F4F3;    /* ★ 页面底色 */
+  --dipi-ink-50:  #F7F8F8;    /* 次级区块底 / 骨架屏底 */
+
+  /* -- 表面与遮罩 ---------------------------------------------------- */
+  --dipi-surface: #FFFFFF;     /* ★ 卡片底 / 弹层底 */
+  --dipi-white:   #FFFFFF;     /* 纯白：深色底上的文字 / 描边 / 骨架高光 */
+  --dipi-overlay: rgba(12, 20, 18, 0.55); /* 遮罩（禁用 backdrop-filter） */
+
+  /* -- 骨架屏高光渐变（唯一允许使用 linear-gradient 的场景之一） ------- */
+  --dipi-skeleton-shine: linear-gradient(
+    90deg,
+    var(--dipi-ink-50) 25%,
+    var(--dipi-white) 37%,
+    var(--dipi-ink-50) 63%
+  );
+
+  /* ==========================================================================
+   * 2. 间距标尺 — 8rpx（4px）基准栅格
+   * ========================================================================== */
+  --dipi-space-0: 2rpx;   /* 1px  发丝间距：价格符号与数字之间 */
+  --dipi-space-1: 4rpx;   /* 2px  图标与文字最小缝隙 */
+  --dipi-space-2: 8rpx;   /* 4px  徽章内 padding / 同组元素间距 */
+  --dipi-space-3: 12rpx;  /* 6px  标签与描述 / 标签行间距 */
+  --dipi-space-4: 16rpx;  /* 8px  卡片内元素间距 / chip 行间距 */
+  --dipi-space-5: 24rpx;  /* 12px ★ 卡片间距 / 页面左右边距 / 卡片内边距 */
+  --dipi-space-6: 32rpx;  /* 16px 区块之间 */
+  --dipi-space-7: 40rpx;  /* 20px 页面分节留白 */
+  --dipi-space-8: 64rpx;  /* 32px 页面顶部/底部大留白 */
+
+  /* 负间距：用于「元素反向抵掉父容器 padding」的场景。
+     刻意提供独立负值 token，而不是用 calc() 做乘法——
+     calc() 的乘法运算符（CSS Values L4）在低版本 iOS WebView / 部分安卓机不支持。 */
+  --dipi-space-n1: -8rpx;   /* -4px  */
+  --dipi-space-n2: -16rpx;  /* -8px  */
+  --dipi-space-n3: -24rpx;  /* -12px */
+
+  /* ==========================================================================
+   * 3. 圆角 — 卡片 24 > 按钮 16 > 标签 8
+   * ========================================================================== */
+  --dipi-radius-xs:   8rpx;   /* 4px  小标签 / 角标 */
+  --dipi-radius-sm:   12rpx;  /* 6px  输入框内嵌元素 / 小图标底 */
+  --dipi-radius-md:   16rpx;  /* 8px  ★ 按钮 / 输入框 / chip */
+  --dipi-radius-lg:   24rpx;  /* 12px ★ 卡片 */
+  --dipi-radius-xl:   32rpx;  /* 16px 大图卡 / 大气泡 */
+  --dipi-radius-full: 999rpx; /* 圆形头像 / 胶囊 chip / 圆形图标底 */
+
+  /* ==========================================================================
+   * 4. 字号与行高阶梯 — 仅 5 级 + 2 级价格
+   * ========================================================================== */
+  --dipi-fs-display:    44rpx; /* 22px 页面主标题 / 空状态大标题 */
+  --dipi-fs-title:      34rpx; /* 17px 区块标题 / 卡片标题 / 地陪名 */
+  --dipi-fs-body:       30rpx; /* 15px ★ 正文默认 */
+  --dipi-fs-caption:    26rpx; /* 13px 辅助说明 / 时间戳 */
+  --dipi-fs-label:      22rpx; /* 11px 角标 / 徽章 / 单位（非可读句子） */
+  --dipi-fs-price-lg:   40rpx; /* 20px 详情页价格 */
+  --dipi-fs-price:      30rpx; /* 15px 列表价格 */
+  --dipi-fs-num-badge:  20rpx; /* 10px 数字角标 */
+
+  --dipi-line-display: 60rpx; /* 30px */
+  --dipi-line-title:   46rpx; /* 23px */
+  --dipi-line-body:    44rpx; /* 22px */
+  --dipi-line-caption: 36rpx; /* 18px */
+  --dipi-line-label:   30rpx; /* 15px */
+
+  /* 字重：仅 400 / 500 / 600 / 700 */
+  --dipi-fw-regular:  400;
+  --dipi-fw-medium:   500;
+  --dipi-fw-semibold: 600;
+  --dipi-fw-bold:     700;
+
+  /* 字体栈 */
+  --dipi-font-sans: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue",
+                     "Hiragino Sans GB", "Microsoft YaHei", "Source Han Sans SC", sans-serif;
+  --dipi-font-num:  "SF Pro Display", "Helvetica Neue", "DIN Alternate", "Roboto",
+                     var(--dipi-font-sans);
+
+  /* ==========================================================================
+   * 5. 阴影层级 — 卡片只用 xs，弹层才用 md+
+   * ========================================================================== */
+  --dipi-shadow-xs:     0 2rpx 8rpx rgba(26, 29, 28, 0.04);  /* 卡片静态 */
+  --dipi-shadow-sm:     0 4rpx 16rpx rgba(26, 29, 28, 0.06); /* 悬浮卡片 / 吸顶条 */
+  --dipi-shadow-md:     0 8rpx 24rpx rgba(26, 29, 28, 0.08); /* 弹层 / Toast */
+  --dipi-shadow-focus:  0 4rpx 16rpx rgba(15, 111, 99, 0.18);/* 主按钮品牌辉光 */
+
+  /* ==========================================================================
+   * 6. 尺寸常量
+   * ========================================================================== */
+  --dipi-navbar-height: 88rpx;   /* 44px 导航栏内容高（不含 statusBar） */
+  --dipi-tabbar-height: 104rpx;  /* 52px 自定义 TabBar 高度 */
+  --dipi-touch-min:     88rpx;   /* 44px 最小可点区域 */
+  --dipi-page-gutter:   24rpx;   /* 12px 页面左右安全边距 */
+  --dipi-card-padding:  24rpx;   /* 12px 卡片内边距 */
+  --dipi-content-width: 702rpx;  /* 351px 有效内容宽 */
+  --dipi-guide-avatar:  120rpx;  /* 60px 地陪头像 */
+  --dipi-avatar-chat:    72rpx;  /* 36px 聊天头像 */
+  --dipi-bubble-max:   480rpx;  /* 240px 气泡最大宽 */
+  --dipi-star-sm:       24rpx;  /* 12px 小星 */
+  --dipi-star-lg:       32rpx;  /* 16px 大星 */
+
+  /* ==========================================================================
+   * 7. z-index
+   * ========================================================================== */
+  --dipi-z-base:     1;
+  --dipi-z-sticky:   10;
+  --dipi-z-nav:      100;
+  --dipi-z-tabbar:   200;
+  --dipi-z-mask:     900;
+  --dipi-z-dialog:   1000;
+  --dipi-z-toast:    1100;
+
+  /* ==========================================================================
+   * 8. 动效
+   * ========================================================================== */
+  --dipi-duration-press: 120ms;  /* 按下态统一时长 */
+  --dipi-duration-base:  240ms;  /* 常规过渡 */
+  --dipi-easing:         ease-out;
+
+  /* ==========================================================================
+   * 9. 安全区
+   * ========================================================================== */
+  /* 安全区：单一 env() 声明，无重复定义；旧 iOS 由微信基础库自动降级为 0 */
+  --dipi-safe-top:    env(safe-area-inset-top);
+  --dipi-safe-bottom: env(safe-area-inset-bottom);
+}
+
+/* ==========================================================================
+ * 10. 通用原子类
+ * ========================================================================== */
+
+/* ---- 10.1 文本类 ---- */
+.t-display {
+  font-family: var(--dipi-font-sans);
+  font-size: var(--dipi-fs-display);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: var(--dipi-line-display);
+  color: var(--dipi-ink-900);
+}
+.t-title {
+  font-family: var(--dipi-font-sans);
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: var(--dipi-line-title);
+  color: var(--dipi-ink-900);
+}
+.t-body {
+  font-family: var(--dipi-font-sans);
+  font-size: var(--dipi-fs-body);
+  font-weight: var(--dipi-fw-regular);
+  line-height: var(--dipi-line-body);
+  color: var(--dipi-ink-900);
+}
+.t-caption {
+  font-family: var(--dipi-font-sans);
+  font-size: var(--dipi-fs-caption);
+  font-weight: var(--dipi-fw-regular);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-500);
+}
+.t-label {
+  font-family: var(--dipi-font-sans);
+  font-size: var(--dipi-fs-label);
+  font-weight: var(--dipi-fw-medium);
+  line-height: var(--dipi-line-label);
+  color: var(--dipi-ink-700);
+}
+
+/* 价格：数字用等宽数字，价格符号与单位降级 */
+.t-price {
+  font-family: var(--dipi-font-num);
+  font-size: var(--dipi-fs-price);
+  font-weight: var(--dipi-fw-bold);
+  line-height: var(--dipi-line-body);
+  color: var(--dipi-accent-600);
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+.t-price--lg {
+  font-size: var(--dipi-fs-price-lg);
+  line-height: 48rpx;
+}
+.t-price__symbol {
+  font-family: var(--dipi-font-num);
+  font-size: var(--dipi-fs-caption);
+  font-weight: var(--dipi-fw-semibold);
+  color: var(--dipi-accent-600);
+  margin-right: var(--dipi-space-0);
+}
+.t-price__unit {
+  font-family: var(--dipi-font-sans);
+  font-size: var(--dipi-fs-caption);
+  font-weight: var(--dipi-fw-regular);
+  color: var(--dipi-ink-500);
+  margin-left: var(--dipi-space-1);
+}
+.t-price__origin {
+  font-family: var(--dipi-font-num);
+  font-size: var(--dipi-fs-caption);
+  font-weight: var(--dipi-fw-regular);
+  color: var(--dipi-ink-400);
+  text-decoration: line-through;
+  margin-left: var(--dipi-space-2);
+}
+
+/* 文本修饰 */
+.t-ink-900 { color: var(--dipi-ink-900); }
+.t-ink-700 { color: var(--dipi-ink-700); }
+.t-ink-500 { color: var(--dipi-ink-500); }
+.t-ink-400 { color: var(--dipi-ink-400); }
+.t-brand   { color: var(--dipi-brand-600); }
+.t-brand-700 { color: var(--dipi-brand-700); }
+.t-accent  { color: var(--dipi-accent-600); }
+.t-success { color: var(--dipi-success-700); }
+.t-warning { color: var(--dipi-warning-700); }
+.t-error   { color: var(--dipi-error-700); }
+.t-white   { color: var(--dipi-white); }
+
+.t-bold    { font-weight: var(--dipi-fw-bold); }
+.t-semibold{ font-weight: var(--dipi-fw-semibold); }
+.t-medium  { font-weight: var(--dipi-fw-medium); }
+.t-num     { font-family: var(--dipi-font-num); font-variant-numeric: tabular-nums; }
+
+.t-ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.t-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  text-overflow: ellipsis;
+}
+.t-center { text-align: center; }
+.t-left   { text-align: left; }
+.t-right  { text-align: right; }
+
+/* ---- 10.2 容器类 ---- */
+.dipi-page {
+  background-color: var(--dipi-ink-100);
+  min-height: 100vh;
+  padding-left: var(--dipi-page-gutter);
+  padding-right: var(--dipi-page-gutter);
+  box-sizing: border-box;
+}
+.dipi-page--flush {
+  padding-left: 0;
+  padding-right: 0;
+}
+.dipi-page--tabbar {
+  padding-bottom: calc(var(--dipi-safe-bottom) + var(--dipi-space-8));
+}
+.dipi-page--safe-bottom {
+  padding-bottom: calc(var(--dipi-safe-bottom) + var(--dipi-space-5));
+}
+
+.card {
+  background-color: var(--dipi-surface);
+  border-radius: var(--dipi-radius-lg);
+  box-shadow: var(--dipi-shadow-xs);
+  padding: var(--dipi-card-padding);
+  box-sizing: border-box;
+}
+.card--flat {
+  box-shadow: none;
+}
+.card--outline {
+  box-shadow: none;
+  border: 1rpx solid var(--dipi-ink-200);
+}
+.card--brand {
+  background-color: var(--dipi-brand-50);
+  box-shadow: none;
+}
+.card--accent {
+  background-color: var(--dipi-accent-50);
+  box-shadow: none;
+}
+
+.section {
+  margin-top: var(--dipi-space-6);
+}
+.section__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--dipi-space-4);
+}
+.section__title {
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: var(--dipi-line-title);
+  color: var(--dipi-ink-900);
+}
+.section__more {
+  font-size: var(--dipi-fs-caption);
+  color: var(--dipi-ink-500);
+}
+
+.divider {
+  height: 1rpx;
+  background-color: var(--dipi-ink-200);
+}
+.divider--inset {
+  margin-left: var(--dipi-card-padding);
+  margin-right: var(--dipi-card-padding);
+}
+
+.safe-area-bottom {
+  padding-bottom: calc(var(--dipi-safe-bottom) + var(--dipi-space-4));
+  height: calc(var(--dipi-safe-bottom) + var(--dipi-space-4));
+  background-color: var(--dipi-surface);
+}
+.safe-area-bottom--transparent {
+  background-color: transparent;
+}
+
+/* ---- 10.3 状态类 ---- */
+.is-disabled {
+  opacity: 0.55;
+}
+.is-error {
+  color: var(--dipi-error-700);
+}
+.is-error-bg {
+  background-color: var(--dipi-error-100);
+}
+.is-hidden {
+  visibility: hidden;
+}
+.is-ellipsis {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 通用按压态：配合 hover-class="is-pressed" */
+.is-pressed {
+  opacity: 0.85;
+}

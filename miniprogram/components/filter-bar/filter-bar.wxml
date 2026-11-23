@@ -1,0 +1,35 @@
+<!--
+  filter-bar · 筛选 chip 条
+  【纪律】价格区间 chip 是全 App 唯一允许的红色 chip（.dipi-chip--price.is-active，单选）
+-->
+<view class="filter-bar">
+  <!-- 排序行（不吸顶，随列表滚动） -->
+  <scroll-view class="filter-bar__scroll scroll-x" scroll-x enable-flex>
+    <view class="dipi-chip-row">
+      <view
+        wx:for="{{sortOptions}}"
+        wx:key="code"
+        class="dipi-chip {{sortBy === item.code ? 'is-active' : ''}}"
+        hover-class="is-pressed"
+        data-code="{{item.code}}"
+        bindtap="onSort"
+        aria-role="button"
+        aria-selected="{{sortBy === item.code}}"
+        aria-label="按{{item.label}}排序，{{sortBy === item.code ? '当前选中' : '未选中'}}"
+      >
+        {{item.label}}
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 筛选按钮 -->
+  <view
+    class="dipi-chip filter-bar__filter {{activeFilterCount > 0 ? 'is-active' : ''}}"
+    hover-class="is-pressed"
+    bindtap="onFilter"
+    aria-role="button"
+    aria-label="筛选条件，已选 {{activeFilterCount}} 项"
+  >
+    筛选<text wx:if="{{activeFilterCount > 0}}" class="filter-bar__count">{{activeFilterCount}}</text>
+  </view>
+</view>

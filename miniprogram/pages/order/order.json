@@ -1,0 +1,11 @@
+{
+  "navigationBarTitleText": "订单",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "order-status-badge": "/components/order-status-badge/order-status-badge",
+    "price-tag": "/components/price-tag/price-tag",
+    "empty-state": "/components/empty-state/empty-state",
+    "skeleton-card": "/components/skeleton-card/skeleton-card",
+    "load-more": "/components/load-more/load-more"
+  }
+}

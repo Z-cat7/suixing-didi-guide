@@ -1,0 +1,40 @@
+/* skeleton-card · 骨架屏组件样式
+ * 基础视觉类来自 styles/components.wxss（.dipi-skeleton / .dipi-card）
+ */
+.skeleton-card__row {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--dipi-space-4);
+}
+
+.skeleton-card__avatar {
+  width: 88rpx;
+  height: 88rpx;
+  flex-shrink: 0;
+}
+
+.skeleton-card__col {
+  flex: 1;
+  min-width: 0;
+  margin-left: var(--dipi-space-4);
+}
+
+.skeleton-card__w35 { width: 35%; }
+.skeleton-card__w40 { width: 40%; }
+.skeleton-card__w45 { width: 45%; }
+.skeleton-card__w55 { width: 55%; }
+.skeleton-card__w60 { width: 60%; }
+.skeleton-card__w70 { width: 70%; }
+.skeleton-card__w90 { width: 90%; }
+
+.skeleton-card__item {
+  margin-bottom: var(--dipi-space-4);
+}
+
+.skeleton-card__item .dipi-skeleton {
+  margin-bottom: var(--dipi-space-3);
+}
+
+.skeleton-card__item .dipi-skeleton:last-child {
+  margin-bottom: 0;
+}

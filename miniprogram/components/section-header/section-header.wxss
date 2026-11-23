@@ -1,0 +1,14 @@
+/* section-header · 模块标题组件样式
+ * 基础视觉类来自 styles/components.wxss（.section__head / .section__title / .section__more）
+ */
+.section-header__more {
+  display: flex;
+  align-items: center;
+  min-height: var(--dipi-touch-min);
+  padding-left: var(--dipi-space-3);
+}
+
+.section-header__arrow {
+  font-size: var(--dipi-fs-caption);
+  color: var(--dipi-ink-500);
+}

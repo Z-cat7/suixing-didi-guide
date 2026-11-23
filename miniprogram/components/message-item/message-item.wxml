@@ -1,0 +1,56 @@
+<!--
+  message-item · 消息列表项
+  variant: conversation（会话）/ notification（系统通知）
+-->
+<view
+  wx:if="{{variant === 'conversation'}}"
+  class="dipi-msg-item {{item.isActive ? '' : 'message-item--disabled'}}"
+  hover-class="is-pressed"
+  bindtap="onTap"
+  aria-role="button"
+  aria-label="{{ariaLabel}}"
+>
+  <view class="dipi-msg-item__avatar message-item__avatar">
+    <image wx:if="{{item.guideAvatarUrl}}" class="message-item__avatar-img" src="{{item.guideAvatarUrl}}" mode="aspectFill" />
+    <text wx:else class="message-item__avatar-text">{{initial}}</text>
+  </view>
+
+  <view class="dipi-msg-item__col">
+    <view class="message-item__row">
+      <text class="dipi-msg-item__name">{{item.guideName}}</text>
+      <text wx:if="{{!item.isActive}}" class="message-item__closed">已完成</text>
+    </view>
+    <text class="dipi-msg-item__preview">{{previewText}}</text>
+  </view>
+
+  <view class="message-item__aside">
+    <text class="dipi-msg-item__time">{{timeText}}</text>
+    <view wx:if="{{item.unreadCount > 0}}" class="dipi-msg-item__badge" aria-hidden="true">{{badgeText}}</view>
+  </view>
+</view>
+
+<!-- 系统通知 -->
+<view
+  wx:else
+  class="dipi-msg-item message-item--notice {{item.isRead ? '' : 'message-item--unread'}}"
+  hover-class="is-pressed"
+  bindtap="onTap"
+  aria-role="button"
+  aria-label="{{ariaLabel}}"
+>
+  <view class="message-item__notice-icon message-item__notice-icon--{{item.category}}" aria-hidden="true">
+    <text>{{categoryIcon}}</text>
+  </view>
+
+  <view class="dipi-msg-item__col">
+    <view class="message-item__row">
+      <text class="message-item__notice-title">{{item.title}}</text>
+      <text wx:if="{{!item.isRead}}" class="message-item__unread-dot" aria-hidden="true"></text>
+    </view>
+    <text class="dipi-msg-item__preview message-item__notice-content">{{item.content}}</text>
+  </view>
+
+  <view class="message-item__aside">
+    <text class="dipi-msg-item__time">{{timeText}}</text>
+  </view>
+</view>

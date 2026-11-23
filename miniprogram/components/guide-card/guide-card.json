@@ -1,0 +1,7 @@
+{
+  "component": true,
+  "usingComponents": {
+    "rating-stars": "../rating-stars/rating-stars",
+    "price-tag": "../price-tag/price-tag"
+  }
+}

@@ -1,0 +1,160 @@
+<!--
+  聊天页
+  数据来源：GET /api/v1/conversations/:conversationId/messages
+           POST /api/v1/conversations/:conversationId/messages
+           WS 事件 message.new / conversation.unreadChanged / order.statusChanged
+-->
+<view class="chat-page">
+  <!-- WS 状态提示条 -->
+  <view wx:if="{{wsNotice}}" class="dipi-notice chat__notice chat__notice--{{wsNoticeType}}" aria-live="polite">
+    {{wsNotice}}
+  </view>
+
+  <!-- 关联订单状态条 -->
+  <view wx:if="{{linkedOrder}}" class="dipi-notice dipi-notice--brand chat__notice">
+    服务进行中，注意沟通集合点
+  </view>
+
+  <!-- 消息区 -->
+  <scroll-view
+    class="chat__scroll"
+    scroll-y
+    scroll-top="{{scrollTop}}"
+    scroll-with-animation="{{false}}"
+    bindscroll="onScroll"
+    bindscrolltoupper="onScrollTop"
+    upper-threshold="80"
+  >
+    <view wx:if="{{loading}}" class="dipi-chat">
+      <view wx:for="{{4}}" wx:key="index" class="chat__skeleton-row {{index % 2 === 0 ? 'chat__skeleton-row--right' : ''}}">
+        <view class="dipi-skeleton chat__skeleton-bubble"></view>
+      </view>
+    </view>
+
+    <!-- 错误态 -->
+    <empty-state
+      wx:elif="{{error}}"
+      type="error"
+      title="{{errorType === 'forbidden' ? '无权查看该会话' : '加载失败'}}"
+      desc="{{errorType === 'forbidden' ? '该会话不属于当前账号' : '网络好像不太稳定，点击重试'}}"
+      action-text="{{errorType === 'forbidden' ? '返回消息列表' : '重试'}}"
+      bind:action="onErrorAction"
+    />
+
+    <!-- 空态 -->
+    <view wx:elif="{{!loading && !messages.length}}" class="chat__empty">
+      <view class="chat__empty-avatar" aria-hidden="true">
+        <text>{{guideInitial}}</text>
+      </view>
+      <text class="chat__empty-title">{{guideName}} 很高兴认识你</text>
+      <text class="chat__empty-desc">聊聊你的行程，地陪会给你建议</text>
+      <view class="chat__suggestions">
+        <view
+          wx:for="{{suggestQuestions}}"
+          wx:key="*this"
+          class="dipi-chip chat__suggest-chip"
+          hover-class="is-pressed"
+          data-text="{{item}}"
+          bindtap="onSuggestionTap"
+          aria-role="button"
+          aria-label="{{item}}"
+        >
+          {{item}}
+        </view>
+      </view>
+    </view>
+
+    <block wx:else>
+        <view class="chat__content">
+          <!-- 顶部：加载更早消息 -->
+          <view wx:if="{{hasMoreHistory}}" class="chat__more">
+            <view
+              class="dipi-btn dipi-btn--ghost dipi-btn--sm chat__more-btn"
+              hover-class="is-pressed"
+              bindtap="onLoadMoreHistory"
+              aria-role="button"
+              aria-label="加载更早的消息"
+            >
+              {{loadingMore ? '加载中…' : '加载更早的消息'}}
+            </view>
+          </view>
+          <view wx:elif="{{historyFinished}}" class="divider-tip">— 没有更早的消息了 —</view>
+
+          <view class="dipi-chat">
+            <block wx:for="{{messages}}" wx:key="messageId">
+              <!-- 未读分隔线 -->
+              <view wx:if="{{item.showUnreadDivider}}" class="dipi-notice dipi-notice--brand chat__divider" aria-live="polite">
+                以下为新消息
+              </view>
+
+              <chat-bubble
+                message="{{item}}"
+                is-self="{{item.senderType === 'user'}}"
+                guide-avatar-url="{{guideAvatarUrl}}"
+                guide-name="{{guideName}}"
+                bind:retry="onRetrySend"
+                bind:ordertap="onOrderCardTap"
+              />            </block>
+          </view>
+        </view>
+      </block>
+  </scroll-view>
+
+  <!-- 「N 条新消息 ↓」浮标（用户向上翻阅时出现） -->
+  <view
+    wx:if="{{newMessageCount > 0}}"
+    class="chat__new-tips"
+    hover-class="is-pressed"
+    bindtap="onScrollToLatest"
+    aria-role="button"
+    aria-label="有 {{newMessageCount}} 条新消息，点击回到最新"
+  >
+    {{newMessageCount}} 条新消息 ↓
+  </view>
+
+  <!-- 输入栏 -->
+  <view class="dipi-inputbar {{inputDisabled ? 'is-disabled' : ''}}">
+    <view wx:if="{{closedNotice}}" class="dipi-inputbar__notice">
+      {{closedNotice}}
+      <view class="chat__again" hover-class="is-pressed" bindtap="onConsultAgain" aria-role="button" aria-label="再次咨询 {{guideName}}">
+        再次咨询
+      </view>
+    </view>
+
+    <view wx:else class="chat__input-row">
+      <view
+        class="dipi-inputbar__icon"
+        hover-class="is-pressed"
+        bindtap="onClearInput"
+        aria-role="button"
+        aria-label="清空输入内容"
+      >
+        <text aria-hidden="true">⌫</text>
+      </view>
+
+      <input
+        class="dipi-inputbar__field"
+        value="{{inputText}}"
+        placeholder="{{inputPlaceholder}}"
+        placeholder-class="dipi-search__placeholder"
+        confirm-type="send"
+        adjust-position="{{true}}"
+        aria-label="给 {{guideName}} 发消息"
+        bindinput="onInput"
+        bindblur="onInputBlur"
+        bindconfirm="onSend"
+      />
+
+      <view
+        class="dipi-inputbar__send {{canSend ? '' : 'is-disabled'}}"
+        hover-class="is-pressed"
+        bindtap="onSend"
+        aria-role="button"
+        aria-label="发送"
+        aria-disabled="{{!canSend}}"
+      >
+        发送
+      </view>
+    </view>
+  </view>
+</view>

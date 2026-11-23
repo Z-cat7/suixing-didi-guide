@@ -1,0 +1,154 @@
+/* 用户主页样式 */
+.profile__notice {
+  margin-bottom: var(--dipi-space-3);
+}
+
+/* 头部 */
+.profile__header {
+  display: flex;
+  align-items: center;
+  margin-top: var(--dipi-space-4);
+}
+
+.profile__avatar,
+.profile__avatar-placeholder {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: var(--dipi-radius-full);
+  background-color: var(--dipi-ink-100);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.profile__avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.profile__avatar-text,
+.profile__avatar-placeholder {
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-semibold);
+  color: var(--dipi-ink-400);
+}
+
+.profile__avatar-skeleton {
+  width: 120rpx;
+  height: 120rpx;
+  flex-shrink: 0;
+}
+
+.profile__header-col {
+  flex: 1;
+  min-width: 0;
+  margin-left: var(--dipi-space-4);
+}
+
+.profile__name {
+  display: block;
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: var(--dipi-line-title);
+  color: var(--dipi-ink-900);
+}
+
+.profile__sub {
+  display: block;
+  margin-top: var(--dipi-space-1);
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-500);
+}
+
+.profile__edit {
+  flex-shrink: 0;
+  margin-left: var(--dipi-space-3);
+}
+
+.profile__login {
+  flex-shrink: 0;
+  margin-left: var(--dipi-space-3);
+  min-width: 160rpx;
+}
+
+/* 区块 */
+.profile__section {
+  margin-top: var(--dipi-space-4);
+  padding: 0;
+  overflow: hidden;
+}
+
+.profile__section .dipi-list-item {
+  min-height: 96rpx;
+}
+
+/* 订单统计 */
+.profile__stats {
+  display: flex;
+  margin-top: var(--dipi-space-4);
+  padding: var(--dipi-space-4) 0;
+}
+
+.profile__stat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 120rpx;
+}
+
+.profile__stat-count {
+  font-family: var(--dipi-font-num);
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-bold);
+  line-height: var(--dipi-line-title);
+  color: var(--dipi-ink-900);
+}
+
+.profile__stat-label {
+  margin-top: var(--dipi-space-2);
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-500);
+}
+
+/* 底部操作 */
+.profile__footer {
+  margin-top: var(--dipi-space-5);
+  display: flex;
+  flex-direction: column;
+}
+
+.profile__footer-btn {
+  margin-bottom: var(--dipi-space-3);
+}
+
+/* 编辑面板 */
+.profile__gender {
+  display: flex;
+  flex: 1;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+
+.profile__gender .dipi-chip {
+  margin-left: var(--dipi-space-2);
+  margin-bottom: var(--dipi-space-2);
+}
+
+.profile__panel-actions {
+  padding: var(--dipi-space-4) var(--dipi-page-gutter);
+  padding-bottom: calc(var(--dipi-safe-bottom) + var(--dipi-space-4));
+  border-top: 1rpx solid var(--dipi-ink-200);
+  background-color: var(--dipi-surface);
+}
+
+/* 骨架辅助 */
+.profile__w30 { width: 30%; }
+.profile__w40 { width: 40%; }
+.profile__w50 { width: 50%; }
+.profile__w60 { width: 60%; }

@@ -1,0 +1,14 @@
+# 依赖
+node_modules/
+
+# 运行时数据文件（保留目录与 .gitkeep）
+data/*.json
+data/*.tmp
+data/*.corrupt-*
+!data/.gitkeep
+
+# 日志与本地环境
+*.log
+.env
+.env.local
+.DS_Store

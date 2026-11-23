@@ -1,0 +1,290 @@
+<!--
+  下单确认页 P8（独立二级页，表单 + 吸底 CTA）
+  数据来源：GET /api/v1/guides/:guideId（取 data.guide 的 services 与 availableSlots）
+           POST /api/v1/orders
+  规格：docs/02-ux-spec.md §B.8
+-->
+<view class="dipi-page dipi-page--safe-bottom dipi-page--narrow order-create">
+  <!-- 离线提示条 -->
+  <view wx:if="{{offline}}" class="dipi-notice dipi-notice--warning order-create__notice" aria-live="polite">
+    网络连接已断开，暂不能提交订单
+  </view>
+
+  <!-- 草稿回填提示 -->
+  <view wx:if="{{draftRestored}}" class="dipi-notice dipi-notice--brand order-create__notice">
+    <text class="order-create__notice-text">已为你保留上次填写的内容</text>
+    <view class="order-create__notice-action" hover-class="is-pressed" bindtap="onClearDraft" aria-role="button" aria-label="清空上次填写的内容">
+      清空
+    </view>
+  </view>
+
+  <!-- 草稿地陪不一致（已丢弃） -->
+  <view wx:if="{{draftDiscarded}}" class="dipi-notice dipi-notice--warning order-create__notice">
+    上次填写的内容不属于这位地陪，已为你清除
+  </view>
+
+  <!-- 支付未完成提示 -->
+  <view wx:if="{{payPending}}" class="dipi-notice dipi-notice--warning order-create__notice">
+    支付未完成，订单已保留 15 分钟
+  </view>
+
+  <!-- 加载中 -->
+  <block wx:if="{{loading}}">
+    <view class="dipi-card order-create__card">
+      <view class="dipi-skeleton dipi-skeleton--line-lg order-create__w40"></view>
+      <view wx:for="{{3}}" wx:key="index" class="dipi-skeleton dipi-skeleton--line order-create__w90"></view>
+    </view>
+    <view class="dipi-card order-create__card">
+      <view class="dipi-skeleton dipi-skeleton--line-lg order-create__w30"></view>
+      <view wx:for="{{3}}" wx:key="index" class="dipi-skeleton dipi-skeleton--line order-create__w90"></view>
+    </view>
+  </block>
+
+  <!-- 错误态 -->
+  <empty-state
+    wx:elif="{{error}}"
+    type="{{error === 'not_found' ? 'empty' : 'error'}}"
+    title="{{error === 'not_found' ? '该地陪已下架' : '加载失败'}}"
+    desc="{{error === 'not_found' ? '' : '网络好像不太稳定，点击重试'}}"
+    action-text="{{error === 'not_found' ? '返回' : '重试'}}"
+    secondary-text="{{error === 'not_found' ? '咨询TA' : ''}}"
+    bind:action="onErrorAction"
+    bind:secondary="onConsult"
+  />
+
+  <!-- 无可用服务项：整页空态 -->
+  <empty-state
+    wx:elif="{{!services.length}}"
+    type="empty"
+    title="该地陪暂未开放服务"
+    action-text="返回"
+    secondary-text="咨询TA"
+    bind:action="onErrorAction"
+    bind:secondary="onConsult"
+  />
+
+  <block wx:else>
+    <!-- 摘要条（地陪） -->
+    <view class="dipi-card order-create__card order-create__summary">
+      <view class="order-create__summary-avatar">
+        <image wx:if="{{guide.avatarUrl}}" class="order-create__summary-avatar-img" src="{{guide.avatarUrl}}" mode="aspectFill" />
+        <text wx:else class="order-create__summary-avatar-text">{{guideInitial}}</text>
+      </view>
+      <view class="order-create__summary-col">
+        <text class="order-create__summary-name">{{guide.name}}</text>
+        <text class="order-create__summary-title">{{guide.title}}</text>
+      </view>
+    </view>
+
+    <!-- 时段选择（按日期分组） -->
+    <view class="dipi-card order-create__card">
+      <view class="order-create__section-head">
+        <text class="order-create__section-title" aria-role="heading" aria-level="2">选择时段</text>
+        <text wx:if="{{offline}}" class="order-create__offline-tag">离线数据</text>
+      </view>
+
+      <!-- 无可约时段空态 -->
+      <view wx:if="{{!slotGroups.length}}" class="order-create__empty">
+        <text class="order-create__empty-text">近期暂无可约时段</text>
+        <view
+          class="dipi-btn dipi-btn--ghost order-create__empty-btn"
+          hover-class="is-pressed"
+          bindtap="onConsult"
+          aria-role="button"
+          aria-label="咨询 {{guide.name}}"
+        >
+          咨询TA
+        </view>
+      </view>
+
+      <view wx:for="{{slotGroups}}" wx:key="date" wx:for-item="group" class="order-create__slot-group">
+        <text class="order-create__slot-date">{{group.dateLabel}}</text>
+        <view class="order-create__slot-list">
+          <view
+            wx:for="{{group.slots}}"
+            wx:key="slotId"
+            wx:for-item="slot"
+            class="dipi-chip order-create__slot {{slot.available === false ? 'is-disabled' : ''}} {{selectedSlotId === slot.slotId ? 'is-active' : ''}}"
+            hover-class="is-pressed"
+            data-slot="{{slot}}"
+            bindtap="onSelectSlot"
+            aria-role="radio"
+            aria-selected="{{selectedSlotId === slot.slotId}}"
+            aria-disabled="{{slot.available === false}}"
+            aria-label="{{slot.dateLabel}} {{slot.timeSlot}}，{{slot.available === false ? '不可约' : '可约'}}"
+          >
+            {{slot.timeSlot}}
+          </view>
+        </view>
+      </view>
+    </view>
+
+    <!-- 服务项选择（单选组） -->
+    <view class="dipi-card order-create__card">
+      <text class="order-create__section-title" aria-role="heading" aria-level="2">选择服务</text>
+      <view
+        wx:for="{{services}}"
+        wx:key="serviceId"
+        class="order-create__service {{item.isAvailable === false ? 'is-disabled' : ''}} {{selectedServiceId === item.serviceId ? 'is-active' : ''}}"
+        hover-class="is-pressed"
+        data-service="{{item}}"
+        bindtap="onSelectService"
+        aria-role="radio"
+        aria-selected="{{selectedServiceId === item.serviceId}}"
+        aria-disabled="{{item.isAvailable === false}}"
+        aria-label="{{item.name}}，{{item.priceText}}，{{selectedServiceId === item.serviceId ? '已选' : '未选'}}"
+      >
+        <view class="order-create__service-main">
+          <text class="order-create__service-name">{{item.name}}</text>
+          <text class="order-create__service-desc">{{item.description}}</text>
+          <text wx:if="{{item.maxTravelers}}" class="order-create__service-desc">最多 {{item.maxTravelers}} 人</text>
+        </view>
+        <price-tag amount="{{item.priceAmount}}" unit="{{item.priceUnit}}" />
+      </view>
+    </view>
+
+    <!-- 人数与联系人 -->
+    <view class="dipi-card order-create__card">
+      <text class="order-create__section-title" aria-role="heading" aria-level="2">预约信息</text>
+
+      <!-- 人数步进器 -->
+      <view class="dipi-field order-create__field-row">
+        <text class="dipi-field__label">同行人数</text>
+        <view class="order-create__stepper">
+          <view
+            class="order-create__stepper-btn {{travelers <= 1 ? 'is-disabled' : ''}}"
+            hover-class="is-pressed"
+            bindtap="onTravelersMinus"
+            aria-role="button"
+            aria-label="减少同行人数，当前 {{travelers}} 人"
+            aria-disabled="{{travelers <= 1}}"
+          >
+            −
+          </view>
+          <text class="order-create__stepper-value" aria-label="同行 {{travelers}} 人">{{travelers}}</text>
+          <view
+            class="order-create__stepper-btn {{travelers >= maxTravelers ? 'is-disabled' : ''}}"
+            hover-class="is-pressed"
+            bindtap="onTravelersPlus"
+            aria-role="button"
+            aria-label="增加同行人数，当前 {{travelers}} 人"
+            aria-disabled="{{travelers >= maxTravelers}}"
+          >
+            ＋
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{travelersError}}" class="dipi-field__error" aria-live="assertive">{{travelersError}}</view>
+
+      <!-- 联系人姓名 -->
+      <view class="dipi-field order-create__field-row">
+        <text class="dipi-field__label">联系人</text>
+        <input
+          class="dipi-field__input"
+          value="{{contactName}}"
+          placeholder="怎么称呼你"
+          placeholder-class="dipi-field__placeholder"
+          maxlength="20"
+          aria-label="联系人姓名，最多 20 个字"
+          bindinput="onContactNameInput"
+          bindblur="onFieldBlur"
+        />
+      </view>
+
+      <!-- 手机号 -->
+      <view class="dipi-field order-create__field-row">
+        <text class="dipi-field__label">手机号</text>
+        <input
+          class="dipi-field__input"
+          value="{{contactPhone}}"
+          type="number"
+          placeholder="11 位手机号"
+          placeholder-class="dipi-field__placeholder"
+          maxlength="11"
+          aria-label="联系人手机号，11 位数字"
+          bindinput="onContactPhoneInput"
+          bindblur="onFieldBlur"
+        />
+      </view>
+      <view wx:if="{{contactError}}" class="dipi-field__error" aria-live="assertive">{{contactError}}</view>
+
+      <!-- 见面地点 -->
+      <view class="dipi-field order-create__field-row">
+        <text class="dipi-field__label">见面地点</text>
+        <input
+          class="dipi-field__input"
+          value="{{meetingPoint}}"
+          placeholder="可留空由地陪提议"
+          placeholder-class="dipi-field__placeholder"
+          maxlength="50"
+          aria-label="见面地点，可留空由地陪提议"
+          bindinput="onMeetingPointInput"
+          bindblur="onFieldBlur"
+        />
+      </view>
+
+      <!-- 备注（多行） -->
+      <view class="order-create__remark-field">
+        <text class="dipi-field__label order-create__remark-label">给地陪的备注</text>
+        <textarea
+          class="order-create__remark"
+          value="{{remark}}"
+          placeholder="口味、禁忌、集合点、儿童情况等"
+          placeholder-class="dipi-field__placeholder"
+          maxlength="200"
+          aria-label="给地陪的备注，最多 200 字"
+          bindinput="onRemarkInput"
+          bindblur="onFieldBlur"
+        />
+        <text class="order-create__counter {{remark.length > 200 ? 'is-error' : ''}}">{{remark.length}}/200</text>
+      </view>
+    </view>
+
+    <!-- 金额明细（实时算价预览，提交后以服务端返回为准） -->
+    <view class="dipi-card order-create__card">
+      <text class="order-create__section-title" aria-role="heading" aria-level="2">费用说明</text>
+      <view class="order-create__price-row" aria-label="服务金额 {{priceYuan}} 元">
+        <text class="order-create__price-label">服务金额</text>
+        <text class="order-create__price-value">¥{{priceYuan}}</text>
+      </view>
+      <view wx:if="{{extraAmount}}" class="order-create__price-row" aria-label="附加项 {{extraYuan}} 元">
+        <text class="order-create__price-label">附加项</text>
+        <text class="order-create__price-value">¥{{extraYuan}}</text>
+      </view>
+      <view wx:if="{{discountAmount}}" class="order-create__price-row" aria-label="优惠 {{discountYuan}} 元">
+        <text class="order-create__price-label">优惠</text>
+        <text class="order-create__price-value">-¥{{discountYuan}}</text>
+      </view>
+      <view class="order-create__total">
+        <text class="order-create__total-label">应付总额</text>
+        <view class="dipi-price-block" aria-label="应付总额 {{totalYuan}} 元">
+          <text class="dipi-price__symbol">¥</text>
+          <text class="dipi-price__value">{{totalYuan}}</text>
+        </view>
+      </view>
+      <text class="order-create__total-tip">最终价格以服务端下单返回为准</text>
+    </view>
+
+    <!-- 吸底 CTA：唯一实心主按钮 -->
+    <view class="sticky-cta order-create__cta-bar">
+      <view wx:if="{{ctaError}}" class="order-create__cta-error" aria-live="assertive">{{ctaError}}</view>
+      <view class="order-create__cta">
+        <view class="order-create__cta-price">
+          <text class="order-create__cta-label">合计</text>
+          <text class="order-create__cta-value">{{totalYuan || '--'}}</text>
+        </view>
+        <view
+          class="dipi-btn dipi-btn--primary order-create__cta-btn {{submitDisabled ? 'is-disabled' : ''}}"
+          hover-class="is-pressed"
+          bindtap="onSubmit"
+          aria-role="button"
+          aria-label="提交订单，应付 {{totalYuan || 0}} 元"
+          aria-disabled="{{submitDisabled}}"
+        >
+          {{submitting ? '提交中…' : '提交订单'}}
+        </view>
+      </view>
+    </view>
+    <view class="sticky-cta__placeholder"></view>
+  </block>
+</view>

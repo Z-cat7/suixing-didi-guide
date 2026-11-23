@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "搜索",
+  "usingComponents": {
+    "guide-card": "/components/guide-card/guide-card",
+    "filter-bar": "/components/filter-bar/filter-bar",
+    "empty-state": "/components/empty-state/empty-state",
+    "skeleton-card": "/components/skeleton-card/skeleton-card",
+    "load-more": "/components/load-more/load-more"
+  }
+}

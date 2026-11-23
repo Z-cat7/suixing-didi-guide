@@ -1,0 +1,84 @@
+/* 消息页样式 */
+.message__notice {
+  margin-bottom: var(--dipi-space-3);
+}
+
+/* 双 Tab */
+.message__tabs {
+  display: flex;
+  align-items: center;
+  margin-bottom: var(--dipi-space-3);
+  border-bottom: 1rpx solid var(--dipi-ink-200);
+}
+
+.message__tab {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: var(--dipi-touch-min);
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-regular);
+  line-height: var(--dipi-line-title);
+  color: var(--dipi-ink-500);
+  position: relative;
+}
+
+.message__tab.is-active {
+  color: var(--dipi-brand-700);
+  font-weight: var(--dipi-fw-semibold);
+}
+
+.message__tab.is-active::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 48rpx;
+  height: 4rpx;
+  border-radius: var(--dipi-radius-full);
+  background-color: var(--dipi-brand-600);
+}
+
+.message__tab-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32rpx;
+  height: 32rpx;
+  margin-left: var(--dipi-space-2);
+  padding: 0 var(--dipi-space-2);
+  border-radius: var(--dipi-radius-full);
+  background-color: var(--dipi-error-600);
+  color: var(--dipi-white);
+  font-size: var(--dipi-fs-num-badge);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: 32rpx;
+}
+
+/* 全部已读 */
+.message__readall {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: var(--dipi-space-2);
+}
+
+.message__readall-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--dipi-touch-min);
+  padding: 0 var(--dipi-space-3);
+  font-size: var(--dipi-fs-caption);
+  font-weight: var(--dipi-fw-medium);
+  color: var(--dipi-brand-600);
+}
+
+/* 列表 */
+.message__list {
+  background-color: var(--dipi-surface);
+  border-radius: var(--dipi-radius-lg);
+  overflow: hidden;
+  box-shadow: var(--dipi-shadow-xs);
+}

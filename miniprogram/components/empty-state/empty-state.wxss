@@ -1,0 +1,16 @@
+/* empty-state · 空状态组件样式
+ * 基础视觉类来自 styles/components.wxss（.dipi-empty）
+ */
+.dipi-empty__art-icon {
+  font-size: var(--dipi-fs-display);
+  line-height: var(--dipi-line-display);
+  color: var(--dipi-ink-300);
+}
+
+.dipi-empty__art--error .dipi-empty__art-icon {
+  color: var(--dipi-error-600);
+}
+
+.dipi-empty__action--secondary {
+  margin-top: var(--dipi-space-2);
+}

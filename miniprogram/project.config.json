@@ -1,0 +1,92 @@
+{
+  "description": "项目配置文件",
+  "packOptions": {
+    "ignore": [],
+    "include": []
+  },
+  "setting": {
+    "urlCheck": false,
+    "es6": true,
+    "enhance": true,
+    "postcss": true,
+    "minified": true,
+    "newFeature": true,
+    "coverView": true,
+    "nodeModules": false,
+    "autoAudits": false,
+    "showShadowRootInWxmlPanel": true,
+    "scopeDataCheck": false,
+    "uglifyFileName": false,
+    "checkInvalidKey": true,
+    "checkSiteMap": true,
+    "uploadWithSourceMap": true,
+    "compileHotReLoad": false,
+    "useMultiFrameRuntime": true,
+    "useApiHook": true,
+    "useApiHostProcess": true,
+    "babelSetting": {
+      "ignore": [],
+      "disablePlugins": [],
+      "outputPath": ""
+    },
+    "enableEngineNative": false,
+    "bundle": false,
+    "useIsolateContext": true,
+    "useCompilerModuleCache": true,
+    "userConfirmedUseCompilerModuleCacheSwitch": false,
+    "packNpmManually": false,
+    "packNpmRelationList": [],
+    "minifyWXSS": true,
+    "disableUseStrict": false,
+    "showES6CompileOption": false,
+    "useCompilerPlugins": false,
+    "ignoreUploadUnusedFiles": true
+  },
+  "compileType": "miniprogram",
+  "libVersion": "2.32.0",
+  "appid": "touristicappid",
+  "projectname": "dipi-miniprogram",
+  "miniprogramRoot": "./",
+  "condition": {
+    "miniprogram": {
+      "list": [
+        {
+          "name": "首页",
+          "pathName": "pages/home/home",
+          "query": "",
+          "scene": null
+        },
+        {
+          "name": "搜索页",
+          "pathName": "pages/search/search",
+          "query": "from=home",
+          "scene": null
+        },
+        {
+          "name": "地陪详情",
+          "pathName": "pages/guide/detail",
+          "query": "guideId=g_2051",
+          "scene": null
+        },
+        {
+          "name": "下单确认",
+          "pathName": "pages/order/create",
+          "query": "guideId=g_2051&serviceId=si_9012",
+          "scene": null
+        },
+        {
+          "name": "聊天页",
+          "pathName": "pages/chat/chat",
+          "query": "conversationId=cv_77213",
+          "scene": null
+        },
+        {
+          "name": "订单详情",
+          "pathName": "pages/order/order",
+          "query": "viewMode=detail&orderId=ord_20261123_0001",
+          "scene": null
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,290 @@
+/* 订单页样式 */
+.order__notice {
+  margin-bottom: var(--dipi-space-3);
+}
+
+/* 状态分栏（吸顶） */
+.order__tabs {
+  position: sticky;
+  top: 0;
+  z-index: var(--dipi-z-sticky);
+  background-color: var(--dipi-ink-100);
+  padding-top: var(--dipi-space-2);
+  margin-bottom: var(--dipi-space-2);
+}
+
+.order__tab-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28rpx;
+  height: 28rpx;
+  margin-left: var(--dipi-space-1);
+  padding: 0 var(--dipi-space-1);
+  border-radius: var(--dipi-radius-full);
+  background-color: var(--dipi-brand-100);
+  color: var(--dipi-brand-700);
+  font-size: var(--dipi-fs-num-badge);
+  line-height: 28rpx;
+}
+
+.order__list {
+  padding-top: var(--dipi-space-1);
+}
+
+/* 订单卡 */
+.order-card {
+  margin-bottom: var(--dipi-space-4);
+}
+
+.order-card--highlight {
+  border: 2rpx solid var(--dipi-brand-600);
+}
+
+.order-card__guide {
+  display: block;
+  margin-top: var(--dipi-space-2);
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-500);
+}
+
+.order-card__countdown {
+  margin-top: var(--dipi-space-2);
+}
+
+.order-card__countdown-text {
+  font-family: var(--dipi-font-num);
+  font-size: var(--dipi-fs-caption);
+  color: var(--dipi-warning-700);
+}
+
+.order-card__amount {
+  flex-shrink: 0;
+}
+
+/* 卡内操作按钮（全部次级/幽灵，无实心） */
+.order-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  margin-top: var(--dipi-space-3);
+}
+
+.order-card__actions .dipi-btn {
+  margin-left: var(--dipi-space-3);
+  margin-top: var(--dipi-space-1);
+}
+
+/* ============ 详情视图 ============ */
+.order-detail {
+  padding-top: var(--dipi-space-3);
+}
+
+.order-detail__back {
+  display: flex;
+  align-items: center;
+  min-height: var(--dipi-touch-min);
+  margin-bottom: var(--dipi-space-2);
+  font-size: var(--dipi-fs-body);
+  color: var(--dipi-ink-700);
+}
+
+.order-detail__back-text {
+  margin-left: var(--dipi-space-1);
+}
+
+.order-detail__notice {
+  margin-bottom: var(--dipi-space-3);
+}
+
+.order-detail__card {
+  margin-bottom: var(--dipi-space-4);
+}
+
+.order-detail__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.order-detail__service {
+  display: block;
+  margin-top: var(--dipi-space-3);
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: var(--dipi-line-title);
+  color: var(--dipi-ink-900);
+}
+
+.order-detail__guide {
+  display: block;
+  margin-top: var(--dipi-space-1);
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-500);
+}
+
+.order-detail__divider {
+  margin-top: var(--dipi-space-4);
+  margin-bottom: var(--dipi-space-3);
+}
+
+.order-detail__row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  min-height: 56rpx;
+  padding: var(--dipi-space-2) 0;
+}
+
+.order-detail__row-label {
+  flex-shrink: 0;
+  font-size: var(--dipi-fs-body);
+  color: var(--dipi-ink-500);
+}
+
+.order-detail__row-value {
+  flex: 1;
+  min-width: 0;
+  margin-left: var(--dipi-space-4);
+  font-size: var(--dipi-fs-body);
+  color: var(--dipi-ink-900);
+  text-align: right;
+}
+
+.order-detail__row--total {
+  align-items: center;
+  padding-top: var(--dipi-space-3);
+}
+
+.order-detail__section-title {
+  display: block;
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: var(--dipi-line-title);
+  color: var(--dipi-ink-900);
+  margin-bottom: var(--dipi-space-4);
+}
+
+/* 时间轴 */
+.order-timeline__item {
+  display: flex;
+  align-items: flex-start;
+  min-height: 88rpx;
+}
+
+.order-timeline__dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: var(--dipi-radius-full);
+  background-color: var(--dipi-ink-300);
+  margin-top: 12rpx;
+  margin-right: var(--dipi-space-4);
+  flex-shrink: 0;
+}
+
+.order-timeline__dot--current {
+  background-color: var(--dipi-brand-600);
+}
+
+.order-timeline__col {
+  flex: 1;
+  min-width: 0;
+}
+
+.order-timeline__title {
+  display: block;
+  font-size: var(--dipi-fs-body);
+  font-weight: var(--dipi-fw-medium);
+  line-height: var(--dipi-line-body);
+  color: var(--dipi-ink-900);
+}
+
+.order-timeline__time {
+  display: block;
+  margin-top: var(--dipi-space-1);
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-500);
+}
+
+.order-timeline__note {
+  display: block;
+  margin-top: var(--dipi-space-1);
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-700);
+}
+
+/* 吸底 CTA */
+.order-detail__cta-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.order-detail__cta-secondary {
+  margin-right: var(--dipi-space-3);
+  min-width: 160rpx;
+}
+
+.order-detail__cta-primary {
+  flex: 1;
+  min-width: 0;
+  max-width: 280rpx;
+}
+
+/* 取消原因 / 退款原因 */
+.order__reasons {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin-top: var(--dipi-space-4);
+}
+
+.order__reasons--panel {
+  justify-content: flex-start;
+}
+
+.order__panel-label {
+  display: block;
+  font-size: var(--dipi-fs-body);
+  font-weight: var(--dipi-fw-semibold);
+  color: var(--dipi-ink-900);
+  margin-bottom: var(--dipi-space-3);
+}
+
+.order__desc-field {
+  margin-top: var(--dipi-space-4);
+  padding: 0;
+  border: 1rpx solid var(--dipi-ink-200);
+  border-radius: var(--dipi-radius-md);
+}
+
+.order__desc-field .dipi-field__input {
+  text-align: left;
+  padding: var(--dipi-space-3) var(--dipi-card-padding);
+}
+
+.order__counter {
+  display: block;
+  margin-top: var(--dipi-space-2);
+  font-size: var(--dipi-fs-label);
+  color: var(--dipi-ink-500);
+  text-align: right;
+}
+
+.order__panel-actions {
+  padding: var(--dipi-space-4) var(--dipi-page-gutter);
+  padding-bottom: calc(var(--dipi-safe-bottom) + var(--dipi-space-4));
+  border-top: 1rpx solid var(--dipi-ink-200);
+  background-color: var(--dipi-surface);
+}
+
+@media (max-width: 360px) {
+  /* D0 微屏：订单详情时间轴改单列（本来就是单列，此处收窄行距） */
+  .order-detail__row-value {
+    margin-left: var(--dipi-space-3);
+  }
+}

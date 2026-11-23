@@ -1,0 +1,107 @@
+/* message-item · 消息列表项组件样式
+ * 基础视觉类来自 styles/components.wxss（.dipi-msg-item）
+ */
+.message-item__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.message-item__avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.message-item__avatar-text {
+  font-size: var(--dipi-fs-title);
+  color: var(--dipi-ink-400);
+}
+
+.message-item__row {
+  display: flex;
+  align-items: center;
+}
+
+.message-item__closed {
+  margin-left: var(--dipi-space-2);
+  padding: 0 var(--dipi-space-2);
+  height: 32rpx;
+  line-height: 32rpx;
+  border-radius: var(--dipi-radius-xs);
+  background-color: var(--dipi-ink-100);
+  font-size: var(--dipi-fs-label);
+  color: var(--dipi-ink-500);
+}
+
+.message-item__aside {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  margin-left: var(--dipi-space-2);
+}
+
+.message-item--disabled {
+  opacity: 0.6;
+}
+
+/* 系统通知 */
+.message-item--notice {
+  align-items: flex-start;
+}
+
+.message-item__notice-icon {
+  width: 72rpx;
+  height: 72rpx;
+  border-radius: var(--dipi-radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: var(--dipi-fs-caption);
+  font-weight: var(--dipi-fw-semibold);
+}
+
+.message-item__notice-icon--order {
+  background-color: var(--dipi-info-100);
+  color: var(--dipi-info-700);
+}
+
+.message-item__notice-icon--refund {
+  background-color: var(--dipi-error-100);
+  color: var(--dipi-error-700);
+}
+
+.message-item__notice-icon--system {
+  background-color: var(--dipi-brand-100);
+  color: var(--dipi-brand-700);
+}
+
+.message-item__notice-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--dipi-fs-body);
+  font-weight: var(--dipi-fw-medium);
+  color: var(--dipi-ink-900);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.message-item__notice-content {
+  margin-top: var(--dipi-space-2);
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.message-item__unread-dot {
+  width: 16rpx;
+  height: 16rpx;
+  border-radius: var(--dipi-radius-full);
+  background-color: var(--dipi-error-600);
+  flex-shrink: 0;
+  margin-left: var(--dipi-space-2);
+}

@@ -1,0 +1,16 @@
+<!--
+  section-header · 模块标题
+-->
+<view class="section__head">
+  <text class="section__title" aria-role="heading" aria-level="2">{{title}}</text>
+  <view
+    wx:if="{{more}}"
+    class="section__more section-header__more"
+    hover-class="is-pressed"
+    bindtap="onMore"
+    aria-role="button"
+    aria-label="查看更多{{title}}"
+  >
+    {{more}}<text class="section-header__arrow" aria-hidden="true"> ›</text>
+  </view>
+</view>

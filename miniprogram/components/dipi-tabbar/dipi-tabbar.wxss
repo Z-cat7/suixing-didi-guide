@@ -1,0 +1,35 @@
+/* dipi-tabbar · 自定义 TabBar 组件样式
+ * 基础视觉类来自 styles/components.wxss（.dipi-tabbar）
+ */
+.dipi-tabbar__icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.dipi-tabbar__icon-text {
+  font-size: var(--dipi-fs-label);
+  font-weight: var(--dipi-fw-semibold);
+  color: var(--dipi-ink-500);
+}
+
+.dipi-tabbar__item.is-active .dipi-tabbar__icon-text {
+  color: var(--dipi-brand-600);
+}
+
+.dipi-tabbar__badge {
+  position: absolute;
+  top: -4rpx;
+  left: 60%;
+  min-width: 32rpx;
+  height: 32rpx;
+  padding: 0 6rpx;
+  border-radius: var(--dipi-radius-full);
+  background-color: var(--dipi-error-600);
+  color: var(--dipi-white);
+  font-size: var(--dipi-fs-num-badge);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: 32rpx;
+  text-align: center;
+}

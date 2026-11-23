@@ -1,0 +1,227 @@
+/**
+ * 随行 dipi · 全局样式
+ * ---------------------------------------------------------------------------
+ * WXSS 的 @import 只能在 app.wxss 中生效，因此这里是唯一入口。
+ * tokens.wxss 提供 CSS 变量（颜色 / 字号 / 间距 / 圆角 / 阴影 / 动效 / 安全区），
+ * components.wxss 提供组件视觉类（dipi- 前缀）。
+ *
+ * 【纪律】
+ *   页面 / 组件里禁止出现裸 HEX、阶梯外字号、裸间距。
+ */
+@import "styles/tokens.wxss";
+@import "styles/components.wxss";
+
+/* --------------------------------------------------------------------------
+ * 全局布局辅助类（页面级复用，避免每个页面重复写）
+ * -------------------------------------------------------------------------- */
+
+/* 横向滚动容器：隐藏滚动条 */
+.scroll-x {
+  white-space: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-x::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* 横向滚动容器内子项不换行 */
+.scroll-x__item {
+  display: inline-block;
+  white-space: normal;
+  vertical-align: top;
+}
+
+/* 吸底操作条容器（详情页 / 下单页底部 CTA） */
+.sticky-cta {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--dipi-z-sticky);
+  padding: var(--dipi-space-4) var(--dipi-page-gutter);
+  padding-bottom: calc(var(--dipi-safe-bottom) + var(--dipi-space-4));
+  background-color: var(--dipi-surface);
+  border-top: 1rpx solid var(--dipi-ink-200);
+  box-sizing: border-box;
+}
+
+/* 吸底 CTA 上方内容留白 */
+.sticky-cta__placeholder {
+  height: 160rpx;
+}
+
+/* 弹层遮罩 + 底部面板容器 */
+.sheet-mask {
+  position: fixed;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--dipi-z-mask);
+  background-color: var(--dipi-overlay);
+}
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: var(--dipi-z-dialog);
+  background-color: var(--dipi-surface);
+  border-radius: var(--dipi-radius-xl) var(--dipi-radius-xl) 0 0;
+  padding-bottom: var(--dipi-safe-bottom);
+  max-height: 80vh;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--dipi-touch-min);
+  padding: 0 var(--dipi-space-5);
+  border-bottom: 1rpx solid var(--dipi-ink-200);
+}
+
+.sheet__title {
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: var(--dipi-line-title);
+  color: var(--dipi-ink-900);
+}
+
+.sheet__close {
+  width: var(--dipi-touch-min);
+  height: var(--dipi-touch-min);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dipi-ink-500);
+}
+
+.sheet__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--dipi-space-5);
+}
+
+/* 居中确认弹层 */
+.dialog {
+  position: fixed;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  z-index: var(--dipi-z-dialog);
+  width: 600rpx;
+  max-width: 84vw;
+  background-color: var(--dipi-surface);
+  border-radius: var(--dipi-radius-lg);
+  padding: var(--dipi-space-6) var(--dipi-space-5) var(--dipi-space-5);
+  box-sizing: border-box;
+}
+
+.dialog__title {
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: var(--dipi-line-title);
+  color: var(--dipi-ink-900);
+  text-align: center;
+}
+
+.dialog__desc {
+  margin-top: var(--dipi-space-3);
+  font-size: var(--dipi-fs-body);
+  line-height: var(--dipi-line-body);
+  color: var(--dipi-ink-700);
+  text-align: center;
+}
+
+.dialog__actions {
+  display: flex;
+  margin-top: var(--dipi-space-6);
+}
+
+.dialog__actions .dipi-btn {
+  flex: 1;
+  min-width: 0;
+}
+
+.dialog__actions .dipi-btn + .dipi-btn {
+  margin-left: var(--dipi-space-3);
+}
+
+/* 分隔提示（未读分隔线等） */
+.divider-tip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--dipi-space-3) 0;
+  font-size: var(--dipi-fs-caption);
+  color: var(--dipi-ink-500);
+}
+
+/* --------------------------------------------------------------------------
+ * 响应式断点（E.1）
+ *   D0 微屏 ≤360px：正文/辅助文字改 px 固定值，避免 rpx 缩到不可读
+ * -------------------------------------------------------------------------- */
+@media (max-width: 360px) {
+  .t-body {
+    font-size: 15px;
+    line-height: 22px;
+  }
+  .t-caption {
+    font-size: 13px;
+    line-height: 18px;
+  }
+  .t-label {
+    font-size: 11px;
+    line-height: 15px;
+  }
+  .dipi-btn {
+    font-size: 15px;
+  }
+  .dipi-search__input,
+  .dipi-search__placeholder {
+    font-size: 15px;
+  }
+  .dipi-field__input,
+  .dipi-field__label {
+    font-size: 15px;
+  }
+  .dipi-chat__bubble {
+    font-size: 15px;
+  }
+  .dipi-msg-item__name,
+  .dipi-msg-item__preview {
+    font-size: 15px;
+  }
+}
+
+/* D2 大屏竖持：内容容器居中，限制最大宽度 */
+@media (min-width: 415px) {
+  .dipi-page--narrow {
+    max-width: 750rpx;
+    margin: 0 auto;
+  }
+}
+
+/* D3 平板：内容容器 720px 居中 */
+@media (min-width: 768px) {
+  .dipi-page--narrow {
+    max-width: 720px;
+    margin: 0 auto;
+  }
+}
+
+/* D4 横屏：关键尺寸改 px，吸底 CTA 改 sticky */
+@media (orientation: landscape) and (max-height: 500px) {
+  .sticky-cta {
+    position: sticky;
+  }
+}

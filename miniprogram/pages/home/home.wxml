@@ -1,0 +1,174 @@
+<!--
+  首页
+  数据来源：GET /api/v1/home?city=xxx
+  模块顺序固定（UX 规范 §A.4）：定位条 → 搜索框 → 金刚区 → 推荐横滑 → 场景入口 → 进行中订单 → 保障说明
+-->
+<view class="dipi-page dipi-page--tabbar dipi-page--narrow home">
+  <!-- 离线提示条 -->
+  <view wx:if="{{offline}}" class="dipi-notice dipi-notice--warning home__offline" aria-live="polite">
+    网络连接已断开，显示的是上次缓存的内容
+  </view>
+
+  <!-- 定位差异提示条（不自动切换内容，仅提示） -->
+  <view wx:if="{{cityMismatch}}" class="dipi-notice dipi-notice--brand home__notice">
+    <text class="home__notice-text">已切换到你当前所在的城市</text>
+    <view class="home__notice-action" hover-class="is-pressed" bindtap="onSwitchToLocatedCity" aria-role="button" aria-label="切换到当前定位城市">
+      撤销
+    </view>
+  </view>
+
+  <!-- 模块 1：定位条 -->
+  <view
+    class="home__city"
+    hover-class="is-pressed"
+    bindtap="onPickCity"
+    aria-role="button"
+    aria-label="{{city}}，当前服务城市，点击切换城市"
+  >
+    <view class="home__city-left">
+      <text class="home__city-icon" aria-hidden="true">◎</text>
+      <text class="home__city-name">{{city}}</text>
+      <text wx:if="{{locating}}" class="home__city-locating">定位中</text>
+    </view>
+    <text class="home__city-arrow" aria-hidden="true">›</text>
+  </view>
+
+  <!-- 模块 2：搜索框 -->
+  <view
+    class="dipi-search home__search"
+    hover-class="is-pressed"
+    bindtap="onSearchTap"
+    aria-role="button"
+    aria-label="搜索目的地或服务"
+  >
+    <text class="dipi-search__icon home__search-icon" aria-hidden="true">⌕</text>
+    <text class="dipi-search__placeholder">{{searchPlaceholder}}</text>
+  </view>
+
+  <!-- 加载中：骨架屏 -->
+  <block wx:if="{{loading}}">
+    <view class="home__section">
+      <view class="dipi-skeleton dipi-skeleton--line-lg home__skeleton-title"></view>
+      <view class="home__grid">
+        <view wx:for="{{3}}" wx:key="index" class="home__entry-skeleton">
+          <view class="dipi-skeleton dipi-skeleton--circle home__entry-skeleton-icon"></view>
+          <view class="dipi-skeleton dipi-skeleton--line-sm home__entry-skeleton-text"></view>
+        </view>
+      </view>
+    </view>
+    <view class="home__section">
+      <view class="dipi-skeleton dipi-skeleton--line-lg home__skeleton-title"></view>
+      <skeleton-card type="card" count="2" />
+    </view>
+  </block>
+
+  <!-- 错误态 -->
+  <empty-state
+    wx:elif="{{error}}"
+    type="error"
+    title="加载失败"
+    desc="网络好像不太稳定，点击重试"
+    action-text="重试"
+    bind:action="onRetry"
+  />
+
+  <block wx:else>
+    <!-- 模块 3：服务类型金刚区 -->
+    <view wx:if="{{serviceTypes.length}}" class="home__section">
+      <view class="home__grid">
+        <view
+          wx:for="{{serviceTypes}}"
+          wx:key="code"
+          class="home__entry"
+          hover-class="is-pressed"
+          data-code="{{item.code}}"
+          bindtap="onServiceTypeTap"
+          aria-role="button"
+          aria-label="{{item.name}}，{{item.guideCount}} 位地陪"
+        >
+          <view class="home__entry-icon" aria-hidden="true">
+            <text class="home__entry-icon-text">{{item.name.charAt(0)}}</text>
+          </view>
+          <text class="home__entry-name">{{item.name}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 模块 4：推荐地陪（横滑） -->
+    <view wx:if="{{featuredGuides.length}}" class="home__section">
+      <section-header title="推荐地陪" more="更多" bind:more="onMoreGuides" />
+      <scroll-view class="scroll-x" scroll-x enable-flex>
+        <view class="home__guides">
+          <guide-card
+            wx:for="{{featuredGuides}}"
+            wx:key="guideId"
+            class="scroll-x__item"
+            guide="{{item}}"
+            horizontal="{{true}}"
+            bind:tap="onGuideTap"
+          />
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 模块 5：场景入口（横滑） -->
+    <view wx:if="{{scenes.length}}" class="home__section">
+      <section-header title="看看这些" />
+      <scroll-view class="scroll-x" scroll-x enable-flex>
+        <view class="home__scenes">
+          <view
+            wx:for="{{scenes}}"
+            wx:key="code"
+            class="dipi-card home__scene scroll-x__item"
+            hover-class="is-pressed"
+            data-code="{{item.code}}"
+            data-query="{{item.query}}"
+            bindtap="onSceneTap"
+            aria-role="button"
+            aria-label="{{item.name}}，{{item.subtitle}}"
+          >
+            <text class="home__scene-name">{{item.name}}</text>
+            <text class="home__scene-sub">{{item.subtitle}}</text>
+          </view>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 模块 6：进行中订单提醒（条件渲染） -->
+    <view wx:if="{{activeOrderSummary}}" class="home__section">
+      <view
+        class="dipi-card home__active"
+        hover-class="is-pressed"
+        bindtap="onActiveOrderTap"
+        aria-role="button"
+        aria-label="进行中的订单，{{activeOrderSummary.statusText}}，点击查看"
+      >
+        <view class="home__active-main">
+          <text class="home__active-title">你有进行中的订单</text>
+          <text class="home__active-desc">{{activeOrderSummary.guideName}} · {{activeOrderSummary.serviceName}}</text>
+        </view>
+        <order-status-badge status="{{activeOrderSummary.status}}" status-text="{{activeOrderSummary.statusText}}" />
+      </view>
+    </view>
+
+    <!-- 模块 7：服务保障说明 -->
+    <view wx:if="{{guarantees.length}}" class="home__section">
+      <section-header title="服务保障" />
+      <view class="dipi-card home__guarantees">
+        <view
+          wx:for="{{guarantees}}"
+          wx:key="code"
+          class="home__guarantee"
+          aria-role="text"
+          aria-label="{{item.title}}：{{item.description}}"
+        >
+          <text class="home__guarantee-icon" aria-hidden="true">✓</text>
+          <view class="home__guarantee-col">
+            <text class="home__guarantee-title">{{item.title}}</text>
+            <text class="home__guarantee-desc">{{item.description}}</text>
+          </view>
+        </view>
+      </view>
+    </view>
+  </block>
+</view>

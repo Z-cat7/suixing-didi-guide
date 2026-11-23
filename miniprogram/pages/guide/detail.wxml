@@ -1,0 +1,253 @@
+<!--
+  地陪详情页 P7（独立 push 页）
+  数据来源：GET /api/v1/guides/:guideId（取 data.guide）
+  规格：docs/02-ux-spec.md §B.7
+-->
+<view class="dipi-page dipi-page--safe-bottom dipi-page--narrow guide-detail">
+  <!-- 离线提示条 -->
+  <view wx:if="{{offline}}" class="dipi-notice dipi-notice--warning guide-detail__notice" aria-live="polite">
+    网络连接已断开，显示的是上次缓存的内容
+  </view>
+
+  <!-- 加载中：整页骨架屏（吸底条先不出现） -->
+  <block wx:if="{{loading}}">
+    <view class="dipi-card guide-detail__card">
+      <view class="dipi-skeleton dipi-skeleton--circle guide-detail__avatar-skeleton"></view>
+      <view class="guide-detail__head-col">
+        <view class="dipi-skeleton dipi-skeleton--line-lg guide-detail__w50"></view>
+        <view class="dipi-skeleton dipi-skeleton--line guide-detail__w90"></view>
+        <view class="dipi-skeleton dipi-skeleton--line-sm guide-detail__w40"></view>
+      </view>
+    </view>
+    <view class="dipi-card guide-detail__card">
+      <view class="dipi-skeleton dipi-skeleton--line-lg guide-detail__w40"></view>
+      <view wx:for="{{3}}" wx:key="index" class="dipi-skeleton dipi-skeleton--line guide-detail__service-skeleton"></view>
+    </view>
+    <view class="dipi-card guide-detail__card">
+      <view class="dipi-skeleton dipi-skeleton--line-lg guide-detail__w30"></view>
+      <view wx:for="{{2}}" wx:key="index" class="dipi-skeleton dipi-skeleton--line guide-detail__w90"></view>
+    </view>
+  </block>
+
+  <!-- 错误态（404 → 地陪已下架；不渲染任何地陪字段） -->
+  <empty-state
+    wx:elif="{{error}}"
+    type="{{error === 'not_found' ? 'empty' : 'error'}}"
+    title="{{error === 'not_found' ? '该地陪已下架，去看看其他地陪' : '加载失败'}}"
+    desc="{{error === 'not_found' ? '' : '网络好像不太稳定，点击重试'}}"
+    action-text="{{error === 'not_found' ? '返回' : '重试'}}"
+    bind:action="onErrorAction"
+  />
+
+  <block wx:else>
+    <!-- 地陪休息中提示（不能只禁用不解释） -->
+    <view wx:if="{{guide.isResting}}" class="dipi-notice dipi-notice--warning guide-detail__notice">
+      该地陪今日休息，可先咨询或看看其他地陪
+    </view>
+    <!-- 无可约时段提示 -->
+    <view wx:if="{{!hasAvailableSlot}}" class="dipi-notice dipi-notice--warning guide-detail__notice">
+      该地陪近期暂无可约时段，可先咨询
+    </view>
+
+    <!-- 照片轮播（≤5 张；为空则隐藏） -->
+    <view wx:if="{{photoUrls.length}}" class="guide-detail__photos">
+      <swiper
+        class="guide-detail__swiper"
+        indicator-dots="{{photoUrls.length > 1}}"
+        indicator-color="var(--dipi-ink-300)"
+        indicator-active-color="var(--dipi-brand-600)"
+        circular="{{false}}"
+      >
+        <swiper-item wx:for="{{photoUrls}}" wx:key="*this">
+          <image class="guide-detail__photo" src="{{item}}" mode="aspectFill" lazy-load="{{true}}" />
+        </swiper-item>
+      </swiper>
+    </view>
+
+    <!-- 身份卡 -->
+    <view class="dipi-card guide-detail__card guide-detail__head">
+      <view class="guide-detail__avatar">
+        <image wx:if="{{guide.avatarUrl}}" class="guide-detail__avatar-img" src="{{guide.avatarUrl}}" mode="aspectFill" />
+        <text wx:else class="guide-detail__avatar-text">{{guideInitial}}</text>
+      </view>
+
+      <view class="guide-detail__head-col">
+        <text class="guide-detail__name">{{guide.name}}</text>
+        <text class="guide-detail__title">{{guide.title}}</text>
+        <view wx:if="{{guide.rating}}" class="guide-detail__rating">
+          <rating-stars rating="{{guide.rating}}" size="lg" />
+          <text class="guide-detail__rating-num">{{guide.rating}}</text>
+          <text wx:if="{{guide.ratingCount}}" class="guide-detail__rating-count">({{guide.ratingCount}} 条评价)</text>
+        </view>
+        <view wx:if="{{guide.tags && guide.tags.length}}" class="guide-detail__tags">
+          <text wx:for="{{guide.tags}}" wx:key="*this" class="dipi-guide-card__tag">{{item}}</text>
+        </view>
+        <view wx:if="{{guide.identityVerified}}" class="guide-detail__verified">
+          <text class="guide-detail__verified-icon" aria-hidden="true">✓</text>
+          <text class="guide-detail__verified-text">已实名</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 数据条 -->
+    <view class="dipi-card guide-detail__stats">
+      <view class="guide-detail__stat">
+        <text class="guide-detail__stat-value">{{guide.completedOrderCount || 0}}</text>
+        <text class="guide-detail__stat-label">完成订单</text>
+      </view>
+      <view class="guide-detail__stat">
+        <text class="guide-detail__stat-value">{{guide.responseTimeMin || 0}} 分钟</text>
+        <text class="guide-detail__stat-label">平均响应</text>
+      </view>
+      <view class="guide-detail__stat">
+        <text class="guide-detail__stat-value">{{guide.distanceKm === null || guide.distanceKm === undefined ? '—' : guide.distanceKm + ' km'}}</text>
+        <text class="guide-detail__stat-label">距离</text>
+      </view>
+    </view>
+
+    <!-- 简介与服务亮点 -->
+    <view wx:if="{{guide.introduction || (guide.highlights && guide.highlights.length)}}" class="dipi-card guide-detail__card">
+      <text class="guide-detail__section-title" aria-role="heading" aria-level="2">自我介绍</text>
+      <text wx:if="{{guide.introduction}}" class="guide-detail__intro">{{guide.introduction}}</text>
+      <view wx:if="{{guide.highlights && guide.highlights.length}}" class="guide-detail__highlights">
+        <text wx:for="{{guide.highlights}}" wx:key="*this" class="dipi-guide-card__tag">{{item}}</text>
+      </view>
+      <view wx:if="{{guide.languages && guide.languages.length}}" class="guide-detail__meta">
+        <text class="guide-detail__meta-label">语言</text>
+        <text class="guide-detail__meta-value">{{languagesText}}</text>
+      </view>
+    </view>
+
+    <!-- 服务项清单（单选组） -->
+    <view class="dipi-card guide-detail__card">
+      <text class="guide-detail__section-title" aria-role="heading" aria-level="2">可预约服务</text>
+
+      <!-- 空态：服务项全不可用 / 数据异常 -->
+      <view wx:if="{{!services.length}}" class="guide-detail__empty">
+        <text class="guide-detail__empty-text">{{guide.isResting ? '该地陪暂未开放服务' : '暂无服务信息'}}</text>
+        <view
+          class="dipi-btn dipi-btn--ghost guide-detail__empty-btn"
+          hover-class="is-pressed"
+          bindtap="onConsult"
+          aria-role="button"
+          aria-label="咨询 {{guide.name}}"
+        >
+          咨询TA
+        </view>
+      </view>
+
+      <view
+        wx:for="{{services}}"
+        wx:key="serviceId"
+        class="guide-detail__service {{item.isAvailable ? '' : 'is-disabled'}} {{selectedServiceId === item.serviceId ? 'is-active' : ''}}"
+        hover-class="is-pressed"
+        data-service="{{item}}"
+        bindtap="onSelectService"
+        aria-role="radio"
+        aria-selected="{{selectedServiceId === item.serviceId}}"
+        aria-disabled="{{!item.isAvailable}}"
+        aria-label="{{item.name}}，{{item.durationHours}} 小时，{{item.priceText}} 元，{{selectedServiceId === item.serviceId ? '已选' : '未选'}}{{item.isAvailable ? '' : '，暂不可约'}}"
+      >
+        <view class="guide-detail__service-main">
+          <view class="guide-detail__service-title-row">
+            <text class="guide-detail__service-name">{{item.name}}</text>
+            <text wx:if="{{!item.isAvailable}}" class="guide-detail__service-tag">暂不可约</text>
+          </view>
+          <text class="guide-detail__service-desc">{{item.description}}</text>
+          <text wx:if="{{item.includesText}}" class="guide-detail__includes-text">含 {{item.includesText}}</text>
+        </view>
+        <price-tag amount="{{item.priceAmount}}" unit="{{item.priceUnit}}" />
+      </view>
+    </view>
+
+    <!-- 评价列表（首屏 3 条，可展开） -->
+    <view class="dipi-card guide-detail__card">
+      <text class="guide-detail__section-title" aria-role="heading" aria-level="2">用户评价</text>
+
+      <view wx:if="{{!reviews.length}}" class="guide-detail__empty">
+        <text class="guide-detail__empty-text">还没有评价</text>
+      </view>
+
+      <view
+        wx:for="{{reviews}}"
+        wx:key="reviewId"
+        class="guide-detail__review"
+        aria-label="{{item.userNickname}} 的评价，{{item.rating}} 分，{{item.content}}"
+      >
+        <view class="guide-detail__review-head">
+          <text class="guide-detail__review-name">{{item.userNickname}}</text>
+          <rating-stars rating="{{item.rating}}" size="sm" />
+          <text class="guide-detail__review-time">{{item.createdAtText}}</text>
+        </view>
+        <text class="guide-detail__review-content">{{item.content}}</text>
+        <view wx:if="{{item.reply}}" class="guide-detail__review-reply">
+          <text class="guide-detail__review-reply-label">地陪回复</text>
+          <text class="guide-detail__review-reply-text">{{item.reply}}</text>
+        </view>
+      </view>
+
+      <view
+        wx:if="{{reviews.length > 3 && !reviewsExpanded}}"
+        class="dipi-btn dipi-btn--ghost dipi-btn--block guide-detail__more-btn"
+        hover-class="is-pressed"
+        bindtap="onExpandReviews"
+        aria-role="button"
+        aria-label="展开全部 {{reviews.length}} 条评价"
+      >
+        展开全部评价（{{reviews.length}} 条）
+      </view>
+    </view>
+
+    <!-- 保障说明 -->
+    <view wx:if="{{guarantees.length}}" class="dipi-card guide-detail__card">
+      <text class="guide-detail__section-title" aria-role="heading" aria-level="2">服务保障</text>
+      <view wx:for="{{guarantees}}" wx:key="code" class="guide-detail__guarantee" aria-label="{{item.title}}：{{item.description}}">
+        <text class="guide-detail__guarantee-icon" aria-hidden="true">✓</text>
+        <view class="guide-detail__guarantee-col">
+          <text class="guide-detail__guarantee-title">{{item.title}}</text>
+          <text class="guide-detail__guarantee-desc">{{item.description}}</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 底部吸底条：起价 + 「立即预约」（全页唯一实心主按钮） -->
+    <view class="sticky-cta guide-detail__cta-bar">
+      <view class="guide-detail__cta-price">
+        <price-tag amount="{{selectedService ? selectedService.priceAmount : guide.priceAmount}}" unit="{{selectedService ? selectedService.priceUnit : guide.priceUnit}}" size="lg" />
+      </view>
+      <view
+        class="dipi-btn dipi-btn--primary guide-detail__cta-book {{bookDisabled ? 'is-disabled' : ''}}"
+        hover-class="is-pressed"
+        bindtap="onBook"
+        aria-role="button"
+        aria-label="立即预约 {{guide.name}} 的 {{selectedService ? selectedService.name : '服务'}}，{{selectedPriceYuan}} 元"
+        aria-disabled="{{bookDisabled}}"
+      >
+        {{bookDisabled ? '暂不可约' : '立即预约'}}
+      </view>
+    </view>
+    <view class="sticky-cta__placeholder"></view>
+
+    <!-- 导航栏右侧：收藏 + 咨询（次级操作） -->
+    <view class="guide-detail__navbar-actions">
+      <view
+        class="guide-detail__navbar-btn"
+        hover-class="is-pressed"
+        bindtap="onToggleFavorite"
+        aria-role="button"
+        aria-label="{{isFavorite ? '取消收藏 ' + guide.name : '收藏 ' + guide.name}}"
+      >
+        <text aria-hidden="true">{{isFavorite ? '★' : '☆'}}</text>
+      </view>
+      <view
+        class="guide-detail__navbar-btn guide-detail__navbar-btn--text"
+        hover-class="is-pressed"
+        bindtap="onConsult"
+        aria-role="button"
+        aria-label="咨询 {{guide.name}}"
+      >
+        咨询
+      </view>
+    </view>
+  </block>
+</view>

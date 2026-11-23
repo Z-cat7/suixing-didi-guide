@@ -1,0 +1,28 @@
+<!--
+  dipi-tabbar · 自定义 TabBar（4 项 + 未读数红点）
+  【说明】当前 app.json 使用原生 tabBar（规范 §A.1 要求用 wx.setTabBarBadge 同步角标），
+          本组件作为「完全自定义 TabBar」方案提供：把 app.json 的 tabBar.custom 设为 true，
+          并把 custom-tab-bar/index 指向本组件即可启用。
+-->
+<view class="dipi-tabbar" aria-role="tablist">
+  <view
+    wx:for="{{list}}"
+    wx:key="key"
+    class="dipi-tabbar__item {{active === item.key ? 'is-active' : ''}}"
+    hover-class="is-pressed"
+    data-key="{{item.key}}"
+    data-path="{{item.pagePath}}"
+    bindtap="onTap"
+    aria-role="tab"
+    aria-selected="{{active === item.key}}"
+    aria-label="{{item.label}}{{item.key === 'message' && unreadTotal > 0 ? '，' + unreadTotal + ' 条未读' : ''}}"
+  >
+    <view class="dipi-tabbar__icon dipi-tabbar__icon--{{item.key}}" aria-hidden="true">
+      <text class="dipi-tabbar__icon-text">{{iconText[item.key]}}</text>
+      <view wx:if="{{item.key === 'message' && unreadTotal > 0}}" class="dipi-tabbar__badge">
+        {{unreadTotal > 99 ? '99+' : unreadTotal}}
+      </view>
+    </view>
+    <text class="dipi-tabbar__text">{{item.label}}</text>
+  </view>
+</view>

@@ -1,0 +1,7 @@
+<!--
+  order-status-badge · 订单状态徽章
+  【纪律】徽章必须带文字（不能只靠颜色传达状态）；statusText 由服务端下发
+-->
+<view class="dipi-badge {{badgeClass}} {{size === 'sm' ? 'dipi-badge--sm' : ''}}" aria-hidden="true">
+  {{statusText}}
+</view>

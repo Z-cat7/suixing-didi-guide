@@ -1,0 +1,13 @@
+<!--
+  price-tag · 价格标签
+  【纪律】这是全 App 唯一允许使用 accent 色（陶土红）的位置
+-->
+<view class="dipi-price {{size === 'lg' ? 'dipi-price--lg' : ''}} {{left ? 'dipi-price--left' : ''}}">
+  <text wx:if="{{amount === null || amount === undefined}}" class="dipi-price__na">价格面议</text>
+  <block wx:else>
+    <text class="dipi-price__symbol">¥</text>
+    <text class="dipi-price__value">{{yuan}}</text>
+    <text wx:if="{{originYuan}}" class="dipi-price__origin">¥{{originYuan}}</text>
+    <text wx:if="{{unitText}}" class="dipi-price__unit">/ {{unitText}}</text>
+  </block>
+</view>

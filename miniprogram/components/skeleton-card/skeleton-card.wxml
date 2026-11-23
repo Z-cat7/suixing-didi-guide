@@ -1,0 +1,31 @@
+<!--
+  skeleton-card · 骨架屏
+  【纪律】先骨架后数据，不先渲染白屏
+-->
+<view wx:if="{{type === 'list'}}" class="skeleton-card__list">
+  <view wx:for="{{count}}" wx:key="index" class="dipi-card skeleton-card__row">
+    <view class="dipi-skeleton dipi-skeleton--circle skeleton-card__avatar"></view>
+    <view class="skeleton-card__col">
+      <view class="dipi-skeleton dipi-skeleton--line skeleton-card__w70"></view>
+      <view class="dipi-skeleton dipi-skeleton--line-sm skeleton-card__w45"></view>
+    </view>
+  </view>
+</view>
+
+<view wx:elif="{{type === 'card'}}" class="skeleton-card__cards">
+  <view wx:for="{{count}}" wx:key="index" class="dipi-card skeleton-card__item">
+    <view class="dipi-skeleton dipi-skeleton--line-lg skeleton-card__w60"></view>
+    <view class="dipi-skeleton dipi-skeleton--line skeleton-card__w90"></view>
+    <view class="dipi-skeleton dipi-skeleton--line-sm skeleton-card__w40"></view>
+  </view>
+</view>
+
+<view wx:else class="skeleton-card__msg">
+  <view wx:for="{{count}}" wx:key="index" class="dipi-card skeleton-card__row">
+    <view class="dipi-skeleton dipi-skeleton--circle skeleton-card__avatar"></view>
+    <view class="skeleton-card__col">
+      <view class="dipi-skeleton dipi-skeleton--line skeleton-card__w55"></view>
+      <view class="dipi-skeleton dipi-skeleton--line-sm skeleton-card__w35"></view>
+    </view>
+  </view>
+</view>

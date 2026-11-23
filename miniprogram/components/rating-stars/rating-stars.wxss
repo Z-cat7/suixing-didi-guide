@@ -1,0 +1,7 @@
+/* rating-stars · 评分星级组件样式
+ * 视觉类全部来自 styles/components.wxss（.dipi-stars），此处只做必要的微调
+ */
+.dipi-stars__item {
+  line-height: 1;
+  text-align: center;
+}

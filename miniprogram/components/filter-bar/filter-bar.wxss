@@ -1,0 +1,34 @@
+/* filter-bar · 筛选 chip 条组件样式
+ * 基础视觉类来自 styles/components.wxss（.dipi-chip / .dipi-chip-row）
+ */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  padding-top: var(--dipi-space-2);
+}
+
+.filter-bar__scroll {
+  flex: 1;
+  min-width: 0;
+}
+
+.filter-bar__filter {
+  flex-shrink: 0;
+  margin-right: var(--dipi-page-gutter);
+  margin-bottom: var(--dipi-space-4);
+}
+
+.filter-bar__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 28rpx;
+  height: 28rpx;
+  margin-left: var(--dipi-space-1);
+  padding: 0 var(--dipi-space-1);
+  border-radius: var(--dipi-radius-full);
+  background-color: var(--dipi-brand-600);
+  color: var(--dipi-white);
+  font-size: var(--dipi-fs-num-badge);
+  line-height: 28rpx;
+}

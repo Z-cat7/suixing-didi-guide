@@ -1,0 +1,132 @@
+/* chat-bubble · 聊天气泡组件样式
+ * 基础视觉类来自 styles/components.wxss（.dipi-chat / .dipi-chat__bubble）
+ */
+.chat-bubble__avatar {
+  width: var(--dipi-avatar-chat);
+  height: var(--dipi-avatar-chat);
+  border-radius: var(--dipi-radius-full);
+  background-color: var(--dipi-ink-100);
+  overflow: hidden;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chat-bubble__avatar-img {
+  width: 100%;
+  height: 100%;
+}
+
+.chat-bubble__avatar-text {
+  font-size: var(--dipi-fs-caption);
+  color: var(--dipi-ink-400);
+}
+
+/* 系统提示消息：居中 */
+.chat-bubble__system {
+  display: flex;
+  justify-content: center;
+  padding: var(--dipi-space-3) var(--dipi-space-5);
+}
+
+.chat-bubble__system-text {
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-500);
+  text-align: center;
+}
+
+/* 订单卡 */
+.chat-bubble__order-wrap {
+  display: flex;
+  justify-content: flex-start;
+  padding: var(--dipi-space-2) var(--dipi-page-gutter);
+}
+
+.chat-bubble__order-wrap--self {
+  justify-content: flex-end;
+}
+
+.chat-bubble__order {
+  width: 480rpx;
+  max-width: 100%;
+}
+
+.chat-bubble__order-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.chat-bubble__order-title {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--dipi-fs-body);
+  font-weight: var(--dipi-fw-semibold);
+  color: var(--dipi-ink-900);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chat-bubble__order-meta {
+  display: flex;
+  flex-direction: column;
+  margin-top: var(--dipi-space-2);
+}
+
+.chat-bubble__order-no,
+.chat-bubble__order-time {
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-500);
+}
+
+.chat-bubble__order-foot {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-top: var(--dipi-space-3);
+}
+
+.chat-bubble__order-amount {
+  font-family: var(--dipi-font-num);
+  font-size: var(--dipi-fs-price);
+  font-weight: var(--dipi-fw-bold);
+  color: var(--dipi-accent-600);
+}
+
+.chat-bubble__order-link {
+  font-size: var(--dipi-fs-caption);
+  color: var(--dipi-brand-600);
+}
+
+/* 重发感叹号：72×72rpx 触达 */
+.chat-bubble__retry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 72rpx;
+  height: 72rpx;
+  font-size: var(--dipi-fs-body);
+  font-weight: var(--dipi-fw-bold);
+}
+
+/* 气泡内文本 */
+.dipi-chat__text {
+  font-size: var(--dipi-fs-body);
+  line-height: var(--dipi-line-body);
+  word-break: break-all;
+}
+
+.dipi-chat__foot {
+  display: flex;
+  align-items: center;
+  margin-top: var(--dipi-space-1);
+  min-height: 30rpx;
+}
+
+.dipi-chat__row--self .dipi-chat__foot {
+  justify-content: flex-end;
+}

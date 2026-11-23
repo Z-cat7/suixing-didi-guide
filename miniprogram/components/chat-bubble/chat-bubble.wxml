@@ -1,0 +1,65 @@
+<!--
+  chat-bubble · 聊天气泡
+  【纪律】气泡内容必须在可访问树内；时间戳 aria-hidden（避免重复朗读）
+-->
+<!-- 系统消息：居中 -->
+<view wx:if="{{message.messageType === 'system'}}" class="chat-bubble__system">
+  <text class="chat-bubble__system-text">{{message.content}}</text>
+</view>
+
+<!-- 订单卡消息 -->
+<view wx:elif="{{message.messageType === 'order_card'}}" class="chat-bubble__order-wrap {{isSelf ? 'chat-bubble__order-wrap--self' : ''}}">
+  <view
+    class="dipi-card chat-bubble__order"
+    hover-class="is-pressed"
+    bindtap="onOrderCardTap"
+    aria-role="button"
+    aria-label="订单 {{orderSummary.orderNo}}，{{orderSummary.serviceName}}，状态 {{orderSummary.statusText}}，合计 {{totalYuan}} 元，点击查看订单"
+  >
+    <view class="chat-bubble__order-head">
+      <text class="chat-bubble__order-title">{{orderSummary.serviceName}}</text>
+      <order-status-badge status="{{orderSummary.status}}" status-text="{{orderSummary.statusText}}" size="sm" />
+    </view>
+    <view class="chat-bubble__order-meta">
+      <text class="chat-bubble__order-no">订单号 {{orderSummary.orderNo}}</text>
+      <text class="chat-bubble__order-time">{{orderSummary.scheduledAtText}}</text>
+    </view>
+    <view class="chat-bubble__order-foot">
+      <text class="chat-bubble__order-amount">合计 ¥{{totalYuan}}</text>
+      <text class="chat-bubble__order-link">查看订单 ›</text>
+    </view>
+  </view>
+</view>
+
+<!-- 文本消息 -->
+<view wx:else class="dipi-chat__row {{isSelf ? 'dipi-chat__row--self' : ''}}">
+  <view wx:if="{{!isSelf}}" class="dipi-chat__avatar chat-bubble__avatar" aria-hidden="true">
+    <image wx:if="{{guideAvatarUrl}}" class="chat-bubble__avatar-img" src="{{guideAvatarUrl}}" mode="aspectFill" />
+    <text wx:else class="chat-bubble__avatar-text">{{guideInitial}}</text>
+  </view>
+
+  <view class="dipi-chat__col">
+    <view class="dipi-chat__bubble dipi-chat__bubble--{{isSelf ? 'self' : 'peer'}}">
+      <text class="dipi-chat__text">{{message.content}}</text>
+    </view>
+
+    <view class="dipi-chat__foot">
+      <text class="dipi-chat__time" aria-hidden="true">{{timeText}}</text>
+
+      <!-- 发送中 -->
+      <text wx:if="{{message.status === 'sending'}}" class="dipi-chat__status" aria-live="polite">发送中…</text>
+
+      <!-- 发送失败：感叹号，可点重发 -->
+      <view
+        wx:elif="{{message.status === 'failed'}}"
+        class="dipi-chat__status dipi-chat__status--error chat-bubble__retry"
+        hover-class="is-pressed"
+        bindtap="onRetry"
+        aria-role="button"
+        aria-label="消息发送失败，点击重新发送"
+      >
+        !
+      </view>
+    </view>
+  </view>
+</view>

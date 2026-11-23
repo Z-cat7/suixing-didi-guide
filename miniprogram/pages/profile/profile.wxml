@@ -1,0 +1,341 @@
+<!--
+  用户主页
+  数据来源：GET /api/v1/me、GET /api/v1/me/settings、PUT /api/v1/me
+-->
+<view class="dipi-page dipi-page--tabbar dipi-page--narrow profile">
+  <!-- 离线提示条 -->
+  <view wx:if="{{offline}}" class="dipi-notice dipi-notice--warning profile__notice" aria-live="polite">
+    网络连接已断开，暂不能修改设置
+  </view>
+
+  <!-- 加载中 -->
+  <block wx:if="{{loading}}">
+    <view class="dipi-card profile__header">
+      <view class="dipi-skeleton dipi-skeleton--circle profile__avatar-skeleton"></view>
+      <view class="profile__header-col">
+        <view class="dipi-skeleton dipi-skeleton--line-lg profile__w50"></view>
+        <view class="dipi-skeleton dipi-skeleton--line-sm profile__w30"></view>
+      </view>
+    </view>
+    <view class="dipi-card profile__stats">
+      <view wx:for="{{4}}" wx:key="index" class="profile__stat">
+        <view class="dipi-skeleton dipi-skeleton--line-lg profile__w40"></view>
+        <view class="dipi-skeleton dipi-skeleton--line-sm profile__w60"></view>
+      </view>
+    </view>
+  </block>
+
+  <!-- 未登录态：页面仍可展示浏览型内容，不白屏 -->
+  <block wx:elif="{{!isLoggedIn}}">
+    <view class="dipi-card profile__header">
+      <view class="profile__avatar-placeholder" aria-hidden="true">?</view>
+      <view class="profile__header-col">
+        <text class="profile__name">未登录</text>
+        <text class="profile__sub">登录后查看订单、消息与收藏</text>
+      </view>
+      <view
+        class="dipi-btn dipi-btn--primary profile__login"
+        hover-class="is-pressed"
+        bindtap="onLogin"
+        aria-role="button"
+        aria-label="登录或注册"
+      >
+        登录/注册
+      </view>
+    </view>
+
+    <view class="dipi-card profile__section">
+      <view class="dipi-list-item is-disabled" aria-label="登录后查看订单">
+        <view class="dipi-list-item__col">
+          <text class="dipi-list-item__main">我的订单</text>
+          <text class="dipi-list-item__sub">登录后查看订单</text>
+        </view>
+        <text class="dipi-list-item__arrow" aria-hidden="true">›</text>
+      </view>
+      <view class="dipi-list-item is-disabled" aria-label="登录后查看收藏">
+        <view class="dipi-list-item__col">
+          <text class="dipi-list-item__main">我收藏的地陪</text>
+          <text class="dipi-list-item__sub">登录后可使用</text>
+        </view>
+        <text class="dipi-list-item__arrow" aria-hidden="true">›</text>
+      </view>
+      <view class="dipi-list-item is-disabled" aria-label="登录后可用">
+        <view class="dipi-list-item__col">
+          <text class="dipi-list-item__main">账号与安全</text>
+          <text class="dipi-list-item__sub">登录后可使用</text>
+        </view>
+        <text class="dipi-list-item__arrow" aria-hidden="true">›</text>
+      </view>
+    </view>
+  </block>
+
+  <block wx:else>
+    <!-- 错误块：头部降级为「登录/注册」态，下方内容区错误块 + 重试（不整页白屏） -->
+    <view wx:if="{{error}}" class="dipi-notice dipi-notice--error profile__notice" aria-live="assertive">
+      加载失败，网络好像不太稳定
+    </view>
+
+    <!-- 头像与资料 -->
+    <view class="dipi-card profile__header">
+      <view
+        class="profile__avatar"
+        hover-class="is-pressed"
+        bindtap="onEditAvatar"
+        aria-role="button"
+        aria-label="修改头像"
+      >
+        <image wx:if="{{user.avatarUrl}}" class="profile__avatar-img" src="{{user.avatarUrl}}" mode="aspectFill" />
+        <text wx:else class="profile__avatar-text">{{userInitial}}</text>
+      </view>
+
+      <view class="profile__header-col">
+        <text class="profile__name">{{user.nickname}}</text>
+        <text wx:if="{{user.bio}}" class="profile__sub">{{user.bio}}</text>
+        <text wx:if="{{user.city}}" class="profile__sub">{{user.city}} · {{user.phoneMasked}}</text>
+      </view>
+
+      <view
+        class="dipi-btn dipi-btn--secondary dipi-btn--sm profile__edit"
+        hover-class="is-pressed"
+        bindtap="onEditProfile"
+        aria-role="button"
+        aria-label="编辑个人资料"
+      >
+        编辑资料
+      </view>
+    </view>
+
+    <!-- 实名认证 -->
+    <view
+      class="dipi-card profile__section"
+      hover-class="is-pressed"
+      bindtap="onRealName"
+      aria-role="button"
+      aria-label="实名认证，{{realNameText}}，点击{{realNameAction}}"
+    >
+      <view class="dipi-list-item">
+        <view class="dipi-list-item__col">
+          <text class="dipi-list-item__main">实名认证</text>
+          <text class="dipi-list-item__sub">{{realNameText}}</text>
+        </view>
+        <text class="dipi-list-item__arrow" aria-hidden="true">›</text>
+      </view>
+    </view>
+
+    <!-- 订单统计（4 个数字格） -->
+    <view class="dipi-card profile__stats">
+      <view
+        wx:for="{{orderStatItems}}"
+        wx:key="code"
+        class="profile__stat"
+        hover-class="is-pressed"
+        data-code="{{item.code}}"
+        bindtap="onOrderStatTap"
+        aria-role="button"
+        aria-label="{{item.label}}订单，{{item.count}} 笔"
+      >
+        <text class="profile__stat-count">{{item.count}}</text>
+        <text class="profile__stat-label">{{item.label}}</text>
+      </view>
+    </view>
+
+    <!-- 我的订单入口 -->
+    <view
+      class="dipi-card profile__section"
+      hover-class="is-pressed"
+      bindtap="onAllOrders"
+      aria-role="button"
+      aria-label="查看全部订单"
+    >
+      <view class="dipi-list-item">
+        <view class="dipi-list-item__col">
+          <text class="dipi-list-item__main">我的订单</text>
+          <text class="dipi-list-item__sub">共 {{user.orderCounts.all || 0}} 笔</text>
+        </view>
+        <text class="dipi-list-item__arrow" aria-hidden="true">›</text>
+      </view>
+    </view>
+
+    <!-- 收藏 -->
+    <view
+      class="dipi-card profile__section"
+      hover-class="is-pressed"
+      bindtap="onFavorites"
+      aria-role="button"
+      aria-label="我收藏的地陪，{{favoriteCount}} 位"
+    >
+      <view class="dipi-list-item">
+        <view class="dipi-list-item__col">
+          <text class="dipi-list-item__main">我收藏的地陪</text>
+          <text class="dipi-list-item__sub">{{favoriteCount}} 位</text>
+        </view>
+        <text class="dipi-list-item__arrow" aria-hidden="true">›</text>
+      </view>
+    </view>
+
+    <!-- 设置项 -->
+    <view class="dipi-card profile__section">
+      <view class="dipi-list-item">
+        <view class="dipi-list-item__col">
+          <text class="dipi-list-item__main">订单与服务通知</text>
+        </view>
+        <switch
+          checked="{{settings.notifyEnabled}}"
+          color="{{brandColor}}"
+          disabled="{{offline || settingsDisabled}}"
+          bindchange="onNotifyToggle"
+          aria-label="订单与服务通知，{{settings.notifyEnabled ? '开' : '关'}}"
+          aria-checked="{{settings.notifyEnabled}}"
+        />
+      </view>
+      <view class="dipi-list-item">
+        <view class="dipi-list-item__col">
+          <text class="dipi-list-item__main">隐私授权</text>
+        </view>
+        <switch
+          checked="{{settings.privacyLocation}}"
+          color="{{brandColor}}"
+          disabled="{{offline || settingsDisabled}}"
+          bindchange="onPrivacyToggle"
+          aria-label="隐私授权，{{settings.privacyLocation ? '开' : '关'}}"
+          aria-checked="{{settings.privacyLocation}}"
+        />
+      </view>
+      <view class="dipi-list-item" hover-class="is-pressed" bindtap="onSupport" aria-role="button" aria-label="联系客服">
+        <view class="dipi-list-item__col">
+          <text class="dipi-list-item__main">联系客服</text>
+        </view>
+        <text class="dipi-list-item__arrow" aria-hidden="true">›</text>
+      </view>
+      <view class="dipi-list-item" hover-class="is-pressed" bindtap="onFeedback" aria-role="button" aria-label="意见反馈">
+        <view class="dipi-list-item__col">
+          <text class="dipi-list-item__main">意见反馈</text>
+        </view>
+        <text class="dipi-list-item__arrow" aria-hidden="true">›</text>
+      </view>
+      <view class="dipi-list-item" hover-class="is-pressed" bindtap="onAbout" aria-role="button" aria-label="关于我们">
+        <view class="dipi-list-item__col">
+          <text class="dipi-list-item__main">关于我们</text>
+          <text class="dipi-list-item__sub">随行 v1.0.0</text>
+        </view>
+        <text class="dipi-list-item__arrow" aria-hidden="true">›</text>
+      </view>
+    </view>
+
+    <!-- 清除缓存 / 退出登录 -->
+    <view class="profile__footer">
+      <view
+        wx:if="{{error}}"
+        class="dipi-btn dipi-btn--primary dipi-btn--block profile__footer-btn"
+        hover-class="is-pressed"
+        bindtap="onRetry"
+        aria-role="button"
+        aria-label="重新加载我的资料"
+      >
+        重试
+      </view>
+      <view
+        class="dipi-btn dipi-btn--ghost dipi-btn--block profile__footer-btn"
+        hover-class="is-pressed"
+        bindtap="onClearCache"
+        aria-role="button"
+        aria-label="清除本地缓存，当前 {{cacheSizeMb}} MB"
+      >
+        清除缓存（{{cacheSizeMb}} MB）
+      </view>
+      <view
+        class="dipi-btn dipi-btn--danger-ghost dipi-btn--block profile__footer-btn"
+        hover-class="is-pressed"
+        bindtap="onLogout"
+        aria-role="button"
+        aria-label="退出当前账号"
+      >
+        退出登录
+      </view>
+    </view>
+  </block>
+
+  <!-- ============ 编辑资料面板 ============ -->
+  <view wx:if="{{editPanelOpen}}" class="sheet-mask" bindtap="onEditPanelClose" aria-hidden="true"></view>
+  <view wx:if="{{editPanelOpen}}" class="sheet" aria-role="dialog" aria-label="编辑个人资料">
+    <view class="sheet__head">
+      <text class="sheet__title">编辑资料</text>
+      <view class="sheet__close" hover-class="is-pressed" bindtap="onEditPanelClose" aria-role="button" aria-label="关闭资料编辑面板">
+        <text aria-hidden="true">✕</text>
+      </view>
+    </view>
+
+    <view class="sheet__body">
+      <view class="dipi-field">
+        <text class="dipi-field__label">昵称</text>
+        <input
+          class="dipi-field__input {{nicknameError ? 'is-error' : ''}}"
+          value="{{profileDraft.nickname}}"
+          placeholder="请填写昵称"
+          placeholder-class="dipi-field__placeholder"
+          maxlength="12"
+          aria-label="昵称，最多 12 个字"
+          bindinput="onNicknameInput"
+        />
+      </view>
+      <view wx:if="{{nicknameError}}" class="dipi-field__error" aria-live="assertive">{{nicknameError}}</view>
+
+      <view class="dipi-field">
+        <text class="dipi-field__label">性别</text>
+        <view class="profile__gender">
+          <view
+            wx:for="{{genderOptions}}"
+            wx:key="code"
+            class="dipi-chip {{profileDraft.gender === item.code ? 'is-active' : ''}}"
+            hover-class="is-pressed"
+            data-code="{{item.code}}"
+            bindtap="onGenderChange"
+            aria-role="radio"
+            aria-selected="{{profileDraft.gender === item.code}}"
+            aria-label="{{item.label}}"
+          >
+            {{item.label}}
+          </view>
+        </view>
+      </view>
+
+      <view class="dipi-field">
+        <text class="dipi-field__label">城市</text>
+        <input
+          class="dipi-field__input"
+          value="{{profileDraft.city}}"
+          placeholder="常住城市"
+          placeholder-class="dipi-field__placeholder"
+          maxlength="20"
+          aria-label="常住城市"
+          bindinput="onCityInput"
+        />
+      </view>
+
+      <view class="dipi-field">
+        <text class="dipi-field__label">简介</text>
+        <input
+          class="dipi-field__input"
+          value="{{profileDraft.bio}}"
+          placeholder="爱逛菜市场"
+          placeholder-class="dipi-field__placeholder"
+          maxlength="30"
+          aria-label="个人简介，最多 30 个字"
+          bindinput="onBioInput"
+        />
+      </view>
+    </view>
+
+    <view class="profile__panel-actions">
+      <view
+        class="dipi-btn dipi-btn--primary dipi-btn--block {{profileDraft.nickname ? '' : 'is-disabled'}}"
+        hover-class="is-pressed"
+        bindtap="onSaveProfile"
+        aria-role="button"
+        aria-label="保存个人资料"
+      >
+        保存
+      </view>
+    </view>
+  </view>
+</view>

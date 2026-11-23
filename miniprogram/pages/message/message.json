@@ -1,0 +1,10 @@
+{
+  "navigationBarTitleText": "消息",
+  "enablePullDownRefresh": true,
+  "usingComponents": {
+    "message-item": "/components/message-item/message-item",
+    "empty-state": "/components/empty-state/empty-state",
+    "skeleton-card": "/components/skeleton-card/skeleton-card",
+    "load-more": "/components/load-more/load-more"
+  }
+}

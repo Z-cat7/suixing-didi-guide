@@ -1,0 +1,39 @@
+/* load-more · 触底加载组件样式 */
+.load-more {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--dipi-touch-min);
+  padding: var(--dipi-space-4) 0;
+}
+
+.load-more__text {
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-500);
+}
+
+.load-more__text--error {
+  color: var(--dipi-error-700);
+}
+
+.load-more__spinner {
+  width: 28rpx;
+  height: 28rpx;
+  margin-right: var(--dipi-space-2);
+  border-color: var(--dipi-ink-200);
+  border-top-color: var(--dipi-brand-600);
+}
+
+.load-more__retry {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88rpx;
+  min-height: 88rpx;
+  margin-left: var(--dipi-space-3);
+  padding: 0 var(--dipi-space-4);
+  font-size: var(--dipi-fs-caption);
+  font-weight: var(--dipi-fw-semibold);
+  color: var(--dipi-brand-600);
+}

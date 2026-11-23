@@ -1,0 +1,433 @@
+<!--
+  订单页（列表视图 ⇄ 详情视图，同页 viewMode 切换，不 push 新页）
+  数据来源：GET /api/v1/orders、GET /api/v1/orders/:orderId、POST /api/v1/orders/:orderId/{action}
+-->
+<view class="dipi-page dipi-page--tabbar dipi-page--narrow order">
+  <!-- ============ 列表视图 ============ -->
+  <block wx:if="{{viewMode === 'list'}}">
+    <!-- 离线提示条 -->
+    <view wx:if="{{offline}}" class="dipi-notice dipi-notice--warning order__notice" aria-live="polite">
+      网络连接已断开，操作暂不可用
+    </view>
+
+    <!-- 状态分栏（吸顶） -->
+    <scroll-view class="order__tabs scroll-x" scroll-x enable-flex>
+      <view class="dipi-chip-row">
+        <view
+          wx:for="{{tabs}}"
+          wx:key="code"
+          class="dipi-chip {{currentTab === item.code ? 'is-active' : ''}}"
+          hover-class="is-pressed"
+          data-code="{{item.code}}"
+          bindtap="onTabChange"
+          aria-role="button"
+          aria-selected="{{currentTab === item.code}}"
+          aria-label="查看{{item.label}}订单，{{countByStatus[item.code] || 0}} 笔"
+        >
+          {{item.label}}<text wx:if="{{countByStatus[item.code]}}" class="order__tab-count">{{countByStatus[item.code]}}</text>
+        </view>
+      </view>
+    </scroll-view>
+
+    <!-- 加载中 -->
+    <skeleton-card wx:if="{{loading}}" type="card" count="3" />
+
+    <!-- 错误态 -->
+    <empty-state
+      wx:elif="{{error}}"
+      type="error"
+      title="加载失败"
+      desc="网络好像不太稳定，点击重试"
+      action-text="重试"
+      bind:action="onRetry"
+    />
+
+    <block wx:else>
+      <!-- 空态 -->
+      <empty-state
+        wx:if="{{!list.length}}"
+        type="empty"
+        title="{{currentTab === 'all' ? '还没有订单' : '当前没有' + currentTabText + '的订单'}}"
+        desc="约一位本地地陪，让这趟行程有人带路"
+        action-text="去找地陪"
+        secondary-text="{{currentTab === 'all' ? '' : '查看全部订单'}}"
+        bind:action="onFindGuide"
+        bind:secondary="onShowAllOrders"
+      />
+
+      <!-- 订单列表 -->
+      <view wx:else class="order__list">
+        <view
+          wx:for="{{list}}"
+          wx:key="orderId"
+          class="dipi-card order-card {{item.highlight ? 'order-card--highlight' : ''}}"
+          hover-class="is-pressed"
+          data-order-id="{{item.orderId}}"
+          bindtap="onOrderTap"
+          aria-role="button"
+          aria-label="订单 {{item.orderNo}}，{{item.guideName}} 的 {{item.serviceName}}，状态 {{item.statusText}}，{{item.totalYuan}} 元"
+        >
+          <view class="order-card__head">
+            <text class="dipi-order-card__no">订单号 {{item.orderNo}}</text>
+            <order-status-badge status="{{item.status}}" status-text="{{item.statusText}}" />
+          </view>
+
+          <view class="dipi-order-card__body">
+            <text class="dipi-order-card__title">{{item.serviceName}}</text>
+            <text class="order-card__guide">{{item.guideName}} · {{item.scheduledAtText}}</text>
+          </view>
+
+          <!-- 待支付倒计时 -->
+          <view wx:if="{{item.countdownText}}" class="order-card__countdown">
+            <text class="order-card__countdown-text" aria-hidden="true">{{item.countdownText}}</text>
+          </view>
+
+          <view class="dipi-order-card__foot">
+            <view class="order-card__amount">
+              <price-tag amount="{{item.totalAmount}}" unit="{{item.priceUnit}}" />
+            </view>
+
+            <!-- 卡内按钮一律次级/幽灵，不出现实心主按钮 -->
+            <view class="order-card__actions">
+              <view
+                wx:if="{{item.canUserPay}}"
+                class="dipi-btn dipi-btn--sm dipi-btn--secondary"
+                hover-class="is-pressed"
+                data-order-id="{{item.orderId}}"
+                catchtap="onPay"
+                aria-role="button"
+                aria-label="立即支付 {{item.totalYuan}} 元"
+              >
+                去支付
+              </view>
+              <view
+                wx:if="{{item.canUserConfirm}}"
+                class="dipi-btn dipi-btn--sm dipi-btn--secondary"
+                hover-class="is-pressed"
+                data-order-id="{{item.orderId}}"
+                catchtap="onConfirm"
+                aria-role="button"
+                aria-label="确认订单 {{item.orderNo}} 已完成"
+              >
+                确认完成
+              </view>
+              <view
+                wx:if="{{item.canUserContact}}"
+                class="dipi-btn dipi-btn--sm dipi-btn--ghost"
+                hover-class="is-pressed"
+                data-order-id="{{item.orderId}}"
+                catchtap="onContact"
+                aria-role="button"
+                aria-label="联系 {{item.guideName}}"
+              >
+                联系地陪
+              </view>
+              <view
+                wx:if="{{item.canUserCancel}}"
+                class="dipi-btn dipi-btn--sm dipi-btn--danger-ghost"
+                hover-class="is-pressed"
+                data-order-id="{{item.orderId}}"
+                catchtap="onCancel"
+                aria-role="button"
+                aria-label="取消订单 {{item.orderNo}}"
+              >
+                取消订单
+              </view>
+              <view
+                wx:if="{{item.canUserRefund}}"
+                class="dipi-btn dipi-btn--sm dipi-btn--danger-ghost"
+                hover-class="is-pressed"
+                data-order-id="{{item.orderId}}"
+                catchtap="onRefund"
+                aria-role="button"
+                aria-label="申请退款 {{item.orderNo}}"
+              >
+                申请退款
+              </view>
+              <view
+                wx:if="{{item.canUserReview}}"
+                class="dipi-btn dipi-btn--sm dipi-btn--secondary"
+                hover-class="is-pressed"
+                data-order-id="{{item.orderId}}"
+                catchtap="onReview"
+                aria-role="button"
+                aria-label="评价订单 {{item.orderNo}}"
+              >
+                去评价
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+
+      <load-more status="{{loadMoreStatus}}" bind:retry="onRetryLoadMore" />
+    </block>
+  </block>
+
+  <!-- ============ 详情视图 ============ -->
+  <block wx:else>
+    <view class="order-detail">
+      <!-- 返回箭头（不调 navigateBack，切回列表态） -->
+      <view
+        class="order-detail__back"
+        hover-class="is-pressed"
+        bindtap="onBackToList"
+        aria-role="button"
+        aria-label="返回订单列表"
+      >
+        <text aria-hidden="true">‹</text><text class="order-detail__back-text">返回订单列表</text>
+      </view>
+
+      <!-- 退款驳回提示 -->
+      <view wx:if="{{refundRejected}}" class="dipi-notice dipi-notice--error order-detail__notice" aria-live="assertive">
+        退款申请未通过：{{refundRejected}}
+      </view>
+
+      <!-- 地陪下架提示 -->
+      <view wx:if="{{guideOffline}}" class="dipi-notice dipi-notice--warning order-detail__notice">
+        该地陪已下架，我们正在为你安排替代方案
+      </view>
+
+      <!-- 加载中 -->
+      <view wx:if="{{detailLoading}}" class="order-detail__body">
+        <skeleton-card type="card" count="3" />
+      </view>
+
+      <!-- 错误态（含越权） -->
+      <empty-state
+        wx:elif="{{detailError}}"
+        type="error"
+        title="{{detailError === 'forbidden' ? '无权查看该订单' : '加载失败'}}"
+        desc="{{detailError === 'forbidden' ? '该订单不属于当前账号' : '网络好像不太稳定，点击重试'}}"
+        action-text="{{detailError === 'forbidden' ? '返回订单列表' : '重试'}}"
+        bind:action="onDetailErrorAction"
+      />
+
+      <block wx:elif="{{detail}}">
+        <!-- 概要卡 -->
+        <view class="dipi-card order-detail__card">
+          <view class="order-detail__head">
+            <text class="dipi-order-card__no">订单号 {{detail.orderNo}}</text>
+            <order-status-badge status="{{detail.status}}" status-text="{{detail.statusText}}" />
+          </view>
+          <text class="order-detail__service">{{detail.serviceName}}</text>
+          <text class="order-detail__guide">{{detail.guideName}} · {{detail.guideTitle}}</text>
+
+          <view class="divider divider--inset order-detail__divider"></view>
+
+          <view class="order-detail__rows">
+            <view class="order-detail__row">
+              <text class="order-detail__row-label">预约时间</text>
+              <text class="order-detail__row-value">{{detail.scheduledAtText}}</text>
+            </view>
+            <view class="order-detail__row">
+              <text class="order-detail__row-label">服务时长</text>
+              <text class="order-detail__row-value">{{detail.durationHours}} 小时</text>
+            </view>
+            <view class="order-detail__row">
+              <text class="order-detail__row-label">人数</text>
+              <text class="order-detail__row-value">{{detail.travelers}} 人</text>
+            </view>
+            <view wx:if="{{detail.meetingPoint}}" class="order-detail__row">
+              <text class="order-detail__row-label">见面地点</text>
+              <text class="order-detail__row-value">{{detail.meetingPoint}}</text>
+            </view>
+            <view wx:if="{{detail.meetingPointNote}}" class="order-detail__row">
+              <text class="order-detail__row-label">地点说明</text>
+              <text class="order-detail__row-value">{{detail.meetingPointNote}}</text>
+            </view>
+            <view wx:if="{{detail.remark}}" class="order-detail__row">
+              <text class="order-detail__row-label">我的备注</text>
+              <text class="order-detail__row-value">{{detail.remark}}</text>
+            </view>
+          </view>
+
+          <!-- 金额明细（服务端下发，前端不自算） -->
+          <view class="divider divider--inset order-detail__divider"></view>
+          <view class="order-detail__rows">
+            <view class="order-detail__row">
+              <text class="order-detail__row-label">服务金额</text>
+              <text class="order-detail__row-value">¥{{detail.priceYuan}}</text>
+            </view>
+            <view wx:if="{{detail.extraAmount}}" class="order-detail__row">
+              <text class="order-detail__row-label">附加项</text>
+              <text class="order-detail__row-value">¥{{detail.extraYuan}}</text>
+            </view>
+            <view wx:if="{{detail.discountAmount}}" class="order-detail__row">
+              <text class="order-detail__row-label">优惠</text>
+              <text class="order-detail__row-value">-¥{{detail.discountYuan}}</text>
+            </view>
+            <view class="order-detail__row order-detail__row--total">
+              <text class="order-detail__row-label">应付总额</text>
+              <view class="dipi-price-block">
+                <text class="dipi-price__symbol">¥</text>
+                <text class="dipi-price__value">{{detail.totalYuan}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+
+        <!-- 状态时间轴 -->
+        <view class="dipi-card order-detail__card">
+          <text class="order-detail__section-title" aria-role="heading" aria-level="2">订单进度</text>
+          <view class="order-timeline">
+            <view wx:for="{{detail.timeline}}" wx:key="index" class="order-timeline__item" aria-label="{{item.statusText}}，{{item.atText}}">
+              <view class="order-timeline__dot {{index === 0 ? 'order-timeline__dot--current' : ''}}" aria-hidden="true"></view>
+              <view class="order-timeline__col">
+                <text class="order-timeline__title">{{item.statusText}}</text>
+                <text class="order-timeline__time">{{item.atText}}</text>
+                <text wx:if="{{item.note}}" class="order-timeline__note">{{item.note}}</text>
+              </view>
+            </view>
+          </view>
+        </view>
+      </block>
+
+      <!-- 吸底 CTA：详情页唯一实心主按钮 -->
+      <view wx:if="{{detail && detail.hasPrimaryAction}}" class="sticky-cta">
+        <view class="order-detail__cta-row">
+          <view
+            wx:if="{{detail.canUserCancel}}"
+            class="dipi-btn dipi-btn--danger-ghost order-detail__cta-secondary"
+            hover-class="is-pressed"
+            bindtap="onCancel"
+            aria-role="button"
+            aria-label="取消订单"
+          >
+            取消订单
+          </view>
+          <view
+            wx:if="{{detail.canUserRefund}}"
+            class="dipi-btn dipi-btn--danger-ghost order-detail__cta-secondary"
+            hover-class="is-pressed"
+            bindtap="onRefund"
+            aria-role="button"
+            aria-label="申请退款"
+          >
+            申请退款
+          </view>
+          <view
+            wx:if="{{detail.canUserContact}}"
+            class="dipi-btn dipi-btn--secondary order-detail__cta-secondary"
+            hover-class="is-pressed"
+            bindtap="onContact"
+            aria-role="button"
+            aria-label="联系 {{detail.guideName}}"
+          >
+            联系地陪
+          </view>
+          <view
+            wx:if="{{detail.canUserPay}}"
+            class="dipi-btn dipi-btn--primary order-detail__cta-primary"
+            hover-class="is-pressed"
+            bindtap="onPay"
+            aria-role="button"
+            aria-label="立即支付 {{detail.totalYuan}} 元"
+          >
+            立即支付
+          </view>
+          <view
+            wx:if="{{detail.canUserConfirm}}"
+            class="dipi-btn dipi-btn--primary order-detail__cta-primary"
+            hover-class="is-pressed"
+            bindtap="onConfirm"
+            aria-role="button"
+            aria-label="确认服务已完成"
+          >
+            确认完成
+          </view>
+          <view
+            wx:if="{{detail.canUserReview}}"
+            class="dipi-btn dipi-btn--primary order-detail__cta-primary"
+            hover-class="is-pressed"
+            bindtap="onReview"
+            aria-role="button"
+            aria-label="评价订单"
+          >
+            去评价
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{detail && detail.hasPrimaryAction}}" class="sticky-cta__placeholder"></view>
+    </view>
+  </block>
+
+  <!-- ============ 取消订单确认弹层 ============ -->
+  <view wx:if="{{cancelDialogOpen}}" class="sheet-mask" bindtap="onCancelDialogClose" aria-hidden="true"></view>
+  <view wx:if="{{cancelDialogOpen}}" class="dialog" aria-role="dialog" aria-label="取消订单">
+    <text class="dialog__title">取消订单</text>
+    <text class="dialog__desc">{{cancelDialogDesc}}</text>
+    <view class="order__reasons">
+      <view
+        wx:for="{{cancelReasons}}"
+        wx:key="code"
+        class="dipi-chip {{cancelReasonCode === item.code ? 'is-active' : ''}}"
+        hover-class="is-pressed"
+        data-code="{{item.code}}"
+        bindtap="onSelectCancelReason"
+        aria-role="button"
+        aria-selected="{{cancelReasonCode === item.code}}"
+        aria-label="{{item.label}}，{{cancelReasonCode === item.code ? '已选中' : '未选中'}}"
+      >
+        {{item.label}}
+      </view>
+    </view>
+    <view class="dialog__actions">
+      <view class="dipi-btn dipi-btn--secondary" hover-class="is-pressed" bindtap="onCancelDialogClose" aria-role="button" aria-label="再想想">
+        再想想
+      </view>
+      <view class="dipi-btn dipi-btn--danger" hover-class="is-pressed" bindtap="onSubmitCancel" aria-role="button" aria-label="确定取消订单">
+        确定取消
+      </view>
+    </view>
+  </view>
+
+  <!-- ============ 退款原因面板 ============ -->
+  <view wx:if="{{refundPanelOpen}}" class="sheet-mask" bindtap="onRefundPanelClose" aria-hidden="true"></view>
+  <view wx:if="{{refundPanelOpen}}" class="sheet" aria-role="dialog" aria-label="申请退款">
+    <view class="sheet__head">
+      <text class="sheet__title">申请退款</text>
+      <view class="sheet__close" hover-class="is-pressed" bindtap="onRefundPanelClose" aria-role="button" aria-label="关闭退款申请面板">
+        <text aria-hidden="true">✕</text>
+      </view>
+    </view>
+
+    <view class="sheet__body">
+      <text class="order__panel-label">退款原因（必选）</text>
+      <view class="order__reasons order__reasons--panel">
+        <view
+          wx:for="{{refundReasons}}"
+          wx:key="code"
+          class="dipi-chip {{refundReasonCode === item.code ? 'is-active' : ''}}"
+          hover-class="is-pressed"
+          data-code="{{item.code}}"
+          bindtap="onSelectRefundReason"
+          aria-role="radio"
+          aria-selected="{{refundReasonCode === item.code}}"
+          aria-label="{{item.label}}，{{refundReasonCode === item.code ? '已选中' : '未选中'}}"
+        >
+          {{item.label}}
+        </view>
+      </view>
+
+      <view class="dipi-field order__desc-field">
+        <input
+          class="dipi-field__input"
+          value="{{refundDescription}}"
+          placeholder="补充说明，最多 200 字"
+          placeholder-class="dipi-field__placeholder"
+          maxlength="200"
+          aria-label="补充说明，最多 200 字"
+          bindinput="onRefundDescriptionInput"
+        />
+      </view>
+      <text class="order__counter {{refundDescription.length > 200 ? 'is-error' : ''}}">{{refundDescription.length}}/200</text>
+    </view>
+
+    <view class="order__panel-actions">
+      <view class="dipi-btn dipi-btn--primary" hover-class="is-pressed" bindtap="onSubmitRefund" aria-role="button" aria-label="提交退款申请">
+        提交申请
+      </view>
+    </view>
+  </view>
+</view>

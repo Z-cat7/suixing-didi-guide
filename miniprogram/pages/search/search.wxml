@@ -1,0 +1,250 @@
+<!--
+  搜索页
+  数据来源：GET /api/v1/guides（keyword/destination/serviceType/minPrice/maxPrice/rating/sort/page/pageSize）
+           GET /api/v1/guides/filter-options
+-->
+<view class="dipi-page dipi-page--safe-bottom dipi-page--narrow search">
+  <!-- 离线提示条 -->
+  <view wx:if="{{offline}}" class="dipi-notice dipi-notice--warning search__notice" aria-live="polite">
+    网络连接已断开，显示的是上次缓存的内容
+  </view>
+
+  <!-- 非法筛选值提示 -->
+  <view wx:if="{{filterError}}" class="dipi-notice dipi-notice--error search__notice" aria-live="assertive">
+    有筛选条件无法识别，已为你重置
+  </view>
+
+  <!-- 搜索框 -->
+  <view class="dipi-search search__bar {{inputFocused ? 'is-focus' : ''}}">
+    <text class="dipi-search__icon" aria-hidden="true">⌕</text>
+    <input
+      class="dipi-search__input"
+      value="{{keyword}}"
+      placeholder="{{placeholder}}"
+      placeholder-class="dipi-search__placeholder"
+      focus="{{autoFocus}}"
+      confirm-type="search"
+      aria-label="搜索地陪或目的地"
+      bindinput="onInput"
+      bindfocus="onFocus"
+      bindblur="onBlur"
+      bindconfirm="onConfirm"
+    />
+    <view
+      wx:if="{{keyword}}"
+      class="dipi-search__clear search__clear"
+      hover-class="is-pressed"
+      bindtap="onClearKeyword"
+      aria-role="button"
+      aria-label="清空搜索词"
+    >
+      <text aria-hidden="true">✕</text>
+    </view>
+    <view class="dipi-search__submit" hover-class="is-pressed" bindtap="onConfirm" aria-role="button" aria-label="开始搜索">
+      搜索
+    </view>
+  </view>
+
+  <!-- 排序 + 筛选 -->
+  <filter-bar
+    sort-options="{{sortOptions}}"
+    sort-by="{{sortBy}}"
+    active-filter-count="{{activeFilterCount}}"
+    bind:sortchange="onSortChange"
+    bind:filter="onOpenFilter"
+  />
+
+  <!-- 已选条件 chip 行（空态时显示，让用户知道卡在哪一条） -->
+  <view wx:if="{{activeChips.length}}" class="search__chips">
+    <view
+      wx:for="{{activeChips}}"
+      wx:key="key"
+      class="dipi-chip search__chip {{item.isPrice ? 'dipi-chip--price is-active' : 'is-active'}}"
+      hover-class="is-pressed"
+      data-key="{{item.key}}"
+      bindtap="onRemoveChip"
+      aria-role="button"
+      aria-label="移除筛选条件 {{item.label}}"
+    >
+      {{item.label}}<text class="search__chip-close" aria-hidden="true"> ✕</text>
+    </view>
+  </view>
+
+  <!-- 加载中（首屏） -->
+  <skeleton-card wx:if="{{loading}}" type="list" count="5" />
+
+  <!-- 错误态（首屏失败） -->
+  <empty-state
+    wx:elif="{{error}}"
+    type="error"
+    title="加载失败"
+    desc="网络好像不太稳定，点击重试"
+    action-text="重试"
+    bind:action="onRetry"
+  />
+
+  <!-- 结果列表 -->
+  <block wx:else>
+    <view wx:if="{{!list.length}}" class="search__empty">
+      <empty-state
+        type="empty"
+        title="没有找到符合条件的地陪"
+        desc="试试放宽价格区间，或换个服务类型"
+        action-text="调整筛选"
+        bind:action="onOpenFilter"
+      />
+    </view>
+
+    <view wx:else class="search__list">
+      <guide-card
+        wx:for="{{list}}"
+        wx:key="guideId"
+        guide="{{item}}"
+        bind:tap="onGuideTap"
+      />
+    </view>
+
+    <load-more status="{{loadMoreStatus}}" bind:retry="onRetryLoadMore" />
+  </block>
+
+  <!-- ============ 筛选抽屉（底部） ============ -->
+  <view wx:if="{{filterPanelOpen}}" class="sheet-mask" bindtap="onCloseFilter" aria-hidden="true"></view>
+
+  <view wx:if="{{filterPanelOpen}}" class="sheet search__sheet" aria-role="dialog" aria-label="筛选条件">
+    <view class="sheet__head">
+      <text class="sheet__title">筛选</text>
+      <view
+        class="sheet__close"
+        hover-class="is-pressed"
+        bindtap="onCloseFilter"
+        aria-role="button"
+        aria-label="关闭筛选面板"
+      >
+        <text aria-hidden="true">✕</text>
+      </view>
+    </view>
+
+    <scroll-view class="sheet__body search__sheet-body" scroll-y>
+      <!-- 目的地 -->
+      <view class="search__group">
+        <text class="search__group-title" aria-role="heading" aria-level="2">目的地</text>
+        <view class="search__group-chips">
+          <view
+            wx:for="{{filterOptions.cities}}"
+            wx:key="code"
+            class="dipi-chip {{draftFilters.destination === item.name ? 'is-active' : ''}}"
+            hover-class="is-pressed"
+            data-name="{{item.name}}"
+            bindtap="onToggleCity"
+            aria-role="button"
+            aria-selected="{{draftFilters.destination === item.name}}"
+            aria-label="{{item.name}}，{{draftFilters.destination === item.name ? '已选中' : '未选中'}}"
+          >
+            {{item.name}}
+          </view>
+        </view>
+      </view>
+
+      <!-- 服务类型 -->
+      <view class="search__group">
+        <text class="search__group-title" aria-role="heading" aria-level="2">服务类型</text>
+        <view class="search__group-chips">
+          <view
+            wx:for="{{filterOptions.serviceTypes}}"
+            wx:key="code"
+            class="dipi-chip {{draftFilters.serviceTypes.indexOf(item.code) >= 0 ? 'is-active' : ''}}"
+            hover-class="is-pressed"
+            data-code="{{item.code}}"
+            bindtap="onToggleServiceType"
+            aria-role="button"
+            aria-selected="{{draftFilters.serviceTypes.indexOf(item.code) >= 0}}"
+            aria-label="{{item.name}}，{{draftFilters.serviceTypes.indexOf(item.code) >= 0 ? '已选中' : '未选中'}}"
+          >
+            {{item.name}}
+          </view>
+        </view>
+      </view>
+
+      <!-- 价格区间（唯一红 chip，单选） -->
+      <view class="search__group">
+        <text class="search__group-title" aria-role="heading" aria-level="2">价格区间</text>
+        <view class="search__group-chips">
+          <view
+            wx:for="{{filterOptions.priceRanges}}"
+            wx:key="label"
+            class="dipi-chip dipi-chip--price {{draftFilters.priceRangeIndex === index ? 'is-active' : ''}}"
+            hover-class="is-pressed"
+            data-index="{{index}}"
+            bindtap="onSelectPriceRange"
+            aria-role="button"
+            aria-selected="{{draftFilters.priceRangeIndex === index}}"
+            aria-label="价格 {{item.label}}，{{draftFilters.priceRangeIndex === index ? '已选中' : '未选中'}}"
+          >
+            {{item.label}}
+          </view>
+        </view>
+      </view>
+
+      <!-- 评分 -->
+      <view class="search__group">
+        <text class="search__group-title" aria-role="heading" aria-level="2">评分</text>
+        <view class="search__group-chips">
+          <view
+            wx:for="{{filterOptions.ratings}}"
+            wx:key="value"
+            class="dipi-chip {{draftFilters.rating === item.value ? 'is-active' : ''}}"
+            hover-class="is-pressed"
+            data-value="{{item.value}}"
+            bindtap="onSelectRating"
+            aria-role="button"
+            aria-selected="{{draftFilters.rating === item.value}}"
+            aria-label="{{item.label}}，{{draftFilters.rating === item.value ? '已选中' : '未选中'}}"
+          >
+            {{item.label}}
+          </view>
+        </view>
+      </view>
+
+      <!-- 最快可约 -->
+      <view class="search__group">
+        <text class="search__group-title" aria-role="heading" aria-level="2">最快可约</text>
+        <view class="search__group-chips">
+          <view
+            wx:for="{{filterOptions.availableWindows}}"
+            wx:key="code"
+            class="dipi-chip {{draftFilters.availableWithin === item.code ? 'is-active' : ''}}"
+            hover-class="is-pressed"
+            data-code="{{item.code}}"
+            bindtap="onSelectAvailable"
+            aria-role="button"
+            aria-selected="{{draftFilters.availableWithin === item.code}}"
+            aria-label="{{item.label}}，{{draftFilters.availableWithin === item.code ? '已选中' : '未选中'}}"
+          >
+            {{item.label}}
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+
+    <view class="search__sheet-actions">
+      <view
+        class="dipi-btn dipi-btn--ghost search__reset"
+        hover-class="is-pressed"
+        bindtap="onResetFilter"
+        aria-role="button"
+        aria-label="重置全部筛选条件"
+      >
+        重置
+      </view>
+      <view
+        class="dipi-btn dipi-btn--primary search__apply"
+        hover-class="is-pressed"
+        bindtap="onApplyFilter"
+        aria-role="button"
+        aria-label="查看 {{filteredCount}} 个符合条件的地陪"
+      >
+        查看 {{filteredCount}} 个结果
+      </view>
+    </view>
+  </view>
+</view>

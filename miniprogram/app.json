@@ -1,0 +1,53 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/message/message",
+    "pages/order/order",
+    "pages/profile/profile",
+    "pages/search/search",
+    "pages/chat/chat",
+    "pages/guide/detail",
+    "pages/order/create"
+  ],
+  "window": {
+    "backgroundTextStyle": "light",
+    "navigationBarBackgroundColor": "#FFFFFF",
+    "navigationBarTitleText": "随行",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#F2F4F3",
+    "enablePullDownRefresh": false
+  },
+  "tabBar": {
+    "color": "#69716E",
+    "selectedColor": "#0F6F63",
+    "backgroundColor": "#FFFFFF",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/home/home",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/message/message",
+        "text": "消息"
+      },
+      {
+        "pagePath": "pages/order/order",
+        "text": "订单"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的"
+      }
+    ]
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json",
+  "lazyCodeLoading": "requiredComponents",
+  "permission": {
+    "scope.userLocation": {
+      "desc": "用于为你推荐所在城市的地陪"
+    }
+  },
+  "requiredPrivateInfos": []
+}

@@ -1,0 +1,156 @@
+/* 聊天页样式 */
+.chat-page {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  background-color: var(--dipi-ink-100);
+  box-sizing: border-box;
+}
+
+.chat__notice {
+  margin: var(--dipi-space-3) var(--dipi-page-gutter) 0;
+}
+
+.chat__scroll {
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+.chat__content {
+  box-sizing: border-box;
+}
+
+/* 未读分隔线 */
+.chat__divider {
+  margin: var(--dipi-space-3) var(--dipi-page-gutter);
+  justify-content: center;
+}
+
+/* 加载更早消息 */
+.chat__more {
+  display: flex;
+  justify-content: center;
+  padding: var(--dipi-space-3) 0;
+}
+
+.chat__more-btn {
+  min-width: 200rpx;
+}
+
+/* 骨架 */
+.chat__skeleton-row {
+  display: flex;
+  margin-bottom: var(--dipi-space-4);
+}
+
+.chat__skeleton-row--right {
+  justify-content: flex-end;
+}
+
+.chat__skeleton-bubble {
+  width: 320rpx;
+  height: 96rpx;
+  border-radius: var(--dipi-radius-lg);
+}
+
+/* 空态 */
+.chat__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--dipi-space-8) var(--dipi-page-gutter);
+}
+
+.chat__empty-avatar {
+  width: 120rpx;
+  height: 120rpx;
+  border-radius: var(--dipi-radius-full);
+  background-color: var(--dipi-brand-100);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-semibold);
+  color: var(--dipi-brand-700);
+}
+
+.chat__empty-title {
+  margin-top: var(--dipi-space-4);
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: var(--dipi-line-title);
+  color: var(--dipi-ink-900);
+  text-align: center;
+}
+
+.chat__empty-desc {
+  margin-top: var(--dipi-space-2);
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-500);
+  text-align: center;
+}
+
+.chat__suggestions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-top: var(--dipi-space-5);
+  width: 100%;
+}
+
+.chat__suggest-chip {
+  width: 100%;
+  max-width: 480rpx;
+  margin-bottom: var(--dipi-space-3);
+  justify-content: flex-start;
+}
+
+/* 新消息浮标 */
+.chat__new-tips {
+  position: fixed;
+  right: var(--dipi-page-gutter);
+  bottom: 200rpx;
+  z-index: var(--dipi-z-sticky);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88rpx;
+  min-height: 88rpx;
+  padding: var(--dipi-space-2) var(--dipi-space-4);
+  border-radius: var(--dipi-radius-full);
+  background-color: var(--dipi-brand-600);
+  color: var(--dipi-white);
+  font-size: var(--dipi-fs-caption);
+  font-weight: var(--dipi-fw-semibold);
+  box-shadow: var(--dipi-shadow-md);
+}
+
+/* 输入栏 */
+.chat__input-row {
+  display: flex;
+  align-items: center;
+  padding: var(--dipi-space-2) var(--dipi-page-gutter);
+}
+
+.chat__again {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 64rpx;
+  margin-left: var(--dipi-space-3);
+  padding: 0 var(--dipi-space-4);
+  border-radius: var(--dipi-radius-sm);
+  border: 1rpx solid var(--dipi-brand-600);
+  font-size: var(--dipi-fs-caption);
+  font-weight: var(--dipi-fw-semibold);
+  color: var(--dipi-brand-700);
+}
+
+/* D0 微屏：气泡最大宽随屏宽收缩 */
+@media (max-width: 360px) {
+  .chat__skeleton-bubble {
+    width: 60%;
+  }
+}

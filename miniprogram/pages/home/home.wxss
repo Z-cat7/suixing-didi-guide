@@ -1,0 +1,263 @@
+/* 首页样式 */
+.home__offline,
+.home__notice {
+  margin-bottom: var(--dipi-space-3);
+}
+
+.home__notice {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home__notice-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.home__notice-action {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 88rpx;
+  min-height: var(--dipi-touch-min);
+  margin-left: var(--dipi-space-3);
+  padding: 0 var(--dipi-space-3);
+  font-size: var(--dipi-fs-caption);
+  font-weight: var(--dipi-fw-semibold);
+  color: var(--dipi-brand-700);
+}
+
+/* 模块 1：定位条 */
+.home__city {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: var(--dipi-touch-min);
+}
+
+.home__city-left {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.home__city-icon {
+  font-size: var(--dipi-fs-title);
+  color: var(--dipi-brand-600);
+  margin-right: var(--dipi-space-2);
+}
+
+.home__city-name {
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: var(--dipi-line-title);
+  color: var(--dipi-ink-900);
+}
+
+.home__city-locating {
+  margin-left: var(--dipi-space-2);
+  font-size: var(--dipi-fs-caption);
+  color: var(--dipi-ink-500);
+}
+
+.home__city-arrow {
+  font-size: var(--dipi-fs-title);
+  color: var(--dipi-ink-400);
+}
+
+/* 模块 2：搜索框 */
+.home__search {
+  margin-top: var(--dipi-space-2);
+  height: var(--dipi-touch-min);
+}
+
+.home__search-icon {
+  font-size: var(--dipi-fs-title);
+}
+
+/* 模块 3：金刚区 */
+.home__grid {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.home__entry {
+  width: 33.333%;
+  min-height: 140rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--dipi-space-3) 0;
+}
+
+.home__entry-icon {
+  width: 88rpx;
+  height: 88rpx;
+  border-radius: var(--dipi-radius-full);
+  background-color: var(--dipi-brand-50);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home__entry-icon-text {
+  font-size: var(--dipi-fs-title);
+  font-weight: var(--dipi-fw-semibold);
+  color: var(--dipi-brand-700);
+}
+
+.home__entry-name {
+  margin-top: var(--dipi-space-2);
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-700);
+}
+
+/* 骨架 */
+.home__skeleton-title {
+  width: 200rpx;
+  margin-bottom: var(--dipi-space-4);
+}
+
+.home__entry-skeleton {
+  width: 33.333%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: var(--dipi-space-3) 0;
+}
+
+.home__entry-skeleton-icon {
+  width: 88rpx;
+  height: 88rpx;
+}
+
+.home__entry-skeleton-text {
+  width: 100rpx;
+  margin-top: var(--dipi-space-2);
+}
+
+/* 模块 4：推荐地陪横滑 */
+.home__guides {
+  display: flex;
+  flex-direction: row;
+}
+
+/* 模块 5：场景入口 */
+.home__scenes {
+  display: flex;
+  flex-direction: row;
+}
+
+.home__scene {
+  width: 280rpx;
+  margin-right: var(--dipi-space-4);
+  padding: var(--dipi-space-4);
+}
+
+.home__scene-name {
+  display: block;
+  font-size: var(--dipi-fs-body);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: var(--dipi-line-body);
+  color: var(--dipi-ink-900);
+}
+
+.home__scene-sub {
+  display: block;
+  margin-top: var(--dipi-space-2);
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-500);
+}
+
+/* 模块 6：进行中订单 */
+.home__active {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 96rpx;
+}
+
+.home__active-main {
+  flex: 1;
+  min-width: 0;
+  margin-right: var(--dipi-space-3);
+}
+
+.home__active-title {
+  display: block;
+  font-size: var(--dipi-fs-body);
+  font-weight: var(--dipi-fw-semibold);
+  line-height: var(--dipi-line-body);
+  color: var(--dipi-ink-900);
+}
+
+.home__active-desc {
+  display: block;
+  margin-top: var(--dipi-space-1);
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-500);
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* 模块 7：保障说明 */
+.home__guarantee {
+  display: flex;
+  align-items: flex-start;
+  min-height: 88rpx;
+  padding: var(--dipi-space-3) 0;
+}
+
+.home__guarantee + .home__guarantee {
+  border-top: 1rpx solid var(--dipi-ink-200);
+}
+
+.home__guarantee-icon {
+  width: 40rpx;
+  height: 40rpx;
+  border-radius: var(--dipi-radius-full);
+  background-color: var(--dipi-brand-100);
+  color: var(--dipi-brand-700);
+  font-size: var(--dipi-fs-caption);
+  text-align: center;
+  line-height: 40rpx;
+  flex-shrink: 0;
+  margin-right: var(--dipi-space-3);
+}
+
+.home__guarantee-col {
+  flex: 1;
+  min-width: 0;
+}
+
+.home__guarantee-title {
+  display: block;
+  font-size: var(--dipi-fs-body);
+  font-weight: var(--dipi-fw-medium);
+  line-height: var(--dipi-line-body);
+  color: var(--dipi-ink-900);
+}
+
+.home__guarantee-desc {
+  display: block;
+  margin-top: var(--dipi-space-1);
+  font-size: var(--dipi-fs-caption);
+  line-height: var(--dipi-line-caption);
+  color: var(--dipi-ink-500);
+}
+
+@media (max-width: 360px) {
+  /* D0 微屏：金刚区 5 个（横向滚动不换行） */
+  .home__grid {
+    flex-wrap: nowrap;
+  }
+  .home__entry {
+    width: 20%;
+    flex-shrink: 0;
+  }
+}

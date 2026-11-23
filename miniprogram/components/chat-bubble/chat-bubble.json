@@ -1,0 +1,6 @@
+{
+  "component": true,
+  "usingComponents": {
+    "order-status-badge": "../order-status-badge/order-status-badge"
+  }
+}

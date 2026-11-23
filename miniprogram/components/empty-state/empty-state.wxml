@@ -1,0 +1,31 @@
+<!--
+  empty-state · 空状态 / 错误态 / 离线态
+  文案统一取自 UX 规范 §A.3.4 全局文案表
+-->
+<view class="dipi-empty">
+  <view class="dipi-empty__art {{type === 'error' ? 'dipi-empty__art--error' : ''}}" aria-hidden="true">
+    <text class="dipi-empty__art-icon">{{type === 'error' ? '!' : type === 'offline' ? '⌁' : '◌'}}</text>
+  </view>
+  <text class="dipi-empty__title" aria-role="heading" aria-level="2">{{title}}</text>
+  <text wx:if="{{desc}}" class="dipi-empty__desc">{{desc}}</text>
+  <view
+    wx:if="{{actionText}}"
+    class="dipi-btn dipi-btn--primary dipi-empty__action"
+    hover-class="is-pressed"
+    bindtap="onAction"
+    aria-role="button"
+    aria-label="{{actionText}}"
+  >
+    {{actionText}}
+  </view>
+  <view
+    wx:if="{{secondaryText}}"
+    class="dipi-btn dipi-btn--ghost dipi-empty__action dipi-empty__action--secondary"
+    hover-class="is-pressed"
+    bindtap="onSecondary"
+    aria-role="button"
+    aria-label="{{secondaryText}}"
+  >
+    {{secondaryText}}
+  </view>
+</view>
