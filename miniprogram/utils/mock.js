@@ -807,7 +807,7 @@ const USER = {
     refunded: 0,
   },
   // orderStats 是服务端聚合出的「展示分桶」，非订单状态枚举（前端只渲染）
-  // 退款格同时给出 refunding 与 refunded 两个键，兼容服务端两种命名
+  // 第 4 格键名是 refunded（refunding + refunded），与契约一致
   orderStats: {
     pendingPayment: 1,
     ongoing: 1,
