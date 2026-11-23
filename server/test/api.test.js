@@ -384,6 +384,27 @@ test('POST /api/v1/conversations/:conversationId/messages 发送消息成功', a
   assert.ok(body.data.seq > 0);
 });
 
+test('POST /api/v1/conversations/:id/messages 按 clientMessageId 幂等去重', async () => {
+  const key = `idem-msg-${Date.now()}`;
+  const r1 = await POST('/api/v1/conversations/cv_000001/messages', {
+    content: '幂等消息', clientMessageId: key,
+  }, userToken);
+  assert.equal(r1.status, 200);
+
+  // 同一 clientMessageId 重复提交（模拟「HTTP 已落库但响应丢失，客户端超时重发」）
+  const r2 = await POST('/api/v1/conversations/cv_000001/messages', {
+    content: '幂等消息', clientMessageId: key,
+  }, userToken);
+  assert.equal(r2.status, 200);
+  assert.equal(r2.body.data.messageId, r1.body.data.messageId, '应返回既有消息，不新建');
+  assert.equal(r2.body.data.seq, r1.body.data.seq, 'seq 应复用，不递增');
+
+  // 校验只落了一条
+  const list = await GET('/api/v1/conversations/cv_000001/messages?pageSize=50', userToken);
+  const hits = list.body.data.list.filter((m) => m.clientMessageId === key);
+  assert.equal(hits.length, 1, `应只落 1 条，实际 ${hits.length}`);
+});
+
 test('GET /api/v1/messages 聚合通知与会话', async () => {
   const { status, body } = await GET('/api/v1/messages', userToken);
   assert.equal(status, 200);
@@ -516,6 +537,82 @@ test('POST /api/v1/orders 时段被抢占返回 409', async () => {
   assert.ok(second.body.message.includes('已被预约'));
 });
 
+test('时段核销是地陪级：同一地陪不同服务项的同名 slotId 也互斥', async () => {
+  const guide = await GET('/api/v1/guides/gd_000006');
+  const g = guide.body.data.guide;
+  // 该地陪有多个服务项，理论上共享同一批时段
+  assert.ok(g.services.length >= 2, '该地陪应有多个服务项');
+
+  const slot = g.availableSlots.find((s) => s.available);
+  const svcA = g.services[0];
+  const svcB = g.services[1];
+
+  // 用服务项 A 占用该时段
+  const first = await POST('/api/v1/orders', {
+    guideId: 'gd_000006',
+    serviceId: svcA.serviceId,
+    slotId: slot.slotId,
+    travelers: 1,
+    contactName: '地陪级核销',
+    contactPhone: '13800000001',
+    idempotencyKey: 'idem-guide-level-a',
+  }, userToken);
+  assert.equal(first.status, 200);
+
+  // 用服务项 B（不同服务项）抢同一个 slotId → 也必须 409
+  const second = await POST('/api/v1/orders', {
+    guideId: 'gd_000006',
+    serviceId: svcB.serviceId,
+    slotId: slot.slotId,
+    travelers: 1,
+    contactName: '地陪级核销',
+    contactPhone: '13800000001',
+    idempotencyKey: 'idem-guide-level-b',
+  }, userToken);
+  assert.equal(second.status, 409, '同一地陪的不同服务项也应互斥');
+  assert.equal(second.body.code, 40900);
+  assert.equal(second.body.data.reason, 'slot_taken');
+
+  // 该时段在该地陪的所有服务项上都应变为不可用
+  const after = await GET('/api/v1/guides/gd_000006');
+  const allSlots = after.body.data.guide.availableSlots;
+  const hit = allSlots.find((s) => s.slotId === slot.slotId);
+  assert.equal(hit.available, false, '被占用时段应在该地陪层面置为不可用');
+});
+
+test('取消订单后释放地陪级时段', async () => {
+  const guide = await GET('/api/v1/guides/gd_000007');
+  const g = guide.body.data.guide;
+  const slot = g.availableSlots.find((s) => s.available);
+  const svc = g.services[0];
+
+  const created = await POST('/api/v1/orders', {
+    guideId: 'gd_000007',
+    serviceId: svc.serviceId,
+    slotId: slot.slotId,
+    travelers: 1,
+    contactName: '释放时段',
+    contactPhone: '13800000001',
+    idempotencyKey: 'idem-release-001',
+  }, userToken);
+  assert.equal(created.status, 200);
+
+  // 占用后应不可用
+  const during = await GET('/api/v1/guides/gd_000007');
+  const hitDuring = during.body.data.guide.availableSlots.find((s) => s.slotId === slot.slotId);
+  assert.equal(hitDuring.available, false);
+
+  // 取消 → 释放
+  const cancelled = await POST(`/api/v1/orders/${created.body.data.orderId}/cancel`, {
+    reason: '测试释放',
+  }, userToken);
+  assert.equal(cancelled.status, 200);
+
+  const after = await GET('/api/v1/guides/gd_000007');
+  const hitAfter = after.body.data.guide.availableSlots.find((s) => s.slotId === slot.slotId);
+  assert.equal(hitAfter.available, true, '取消后时段应重新可约');
+});
+
 test('订单完整状态流转：创建→支付→接单→服务中→确认→完成→评价', async () => {
   const guide = await GET('/api/v1/guides/gd_000001');
   const service = guide.body.data.guide.services[0];
@@ -601,10 +698,10 @@ test('orderStats 四格互斥：每单只落一格，且不含 pendingConfirm', 
   assert.equal(s.ongoing, c.accepted + c.inService);
   assert.equal(s.pendingConfirm, c.pendingConfirm);
   assert.equal(s.pendingPayment, c.pendingPayment);
-  assert.equal(s.refunding, c.refunding + c.refunded);
+  assert.equal(s.refunded, c.refunding + c.refunded);
 
   // 四格之和 ≤ 全部订单数（互斥性）
-  const sum = s.pendingPayment + s.ongoing + s.pendingConfirm + s.refunding;
+  const sum = s.pendingPayment + s.ongoing + s.pendingConfirm + s.refunded;
   assert.ok(sum <= c.all, `四格之和 ${sum} 不应超过 ${c.all}`);
 });
 
@@ -612,10 +709,21 @@ test('订单对象含服务端下发的状态→操作映射（前端不自算�
   const list = await GET('/api/v1/orders?status=pendingPayment', userToken);
   const order = list.body.data.list[0];
   const { body } = await GET(`/api/v1/orders/${order.orderId}`, userToken);
-  for (const k of ['status', 'statusText', 'canUserPay', 'canUserCancel', 'canUserConfirm',
+  for (const k of ['status', 'statusText', 'statusBadge', 'statusTone',
+    'allowedActions', 'canUserPay', 'canUserCancel', 'canUserConfirm',
     'canUserRefund', 'canUserContact', 'canUserReview']) {
     assert.ok(k in body.data, `订单对象缺少 ${k}`);
   }
+  // 不得下发与 status 等价的同义键（statusKey / statusCode）
+  assert.ok(!('statusKey' in body.data), '不应下发 statusKey（与 status 等价的同义重复键）');
+  assert.ok(!('statusCode' in body.data), '不应下发 statusCode');
+  // statusBadge 必须是 components.wxss 里真实存在的类名后缀（动态读 CSS）
+  const CSS_PATH = require('node:path').resolve(__dirname, '..', '..', 'miniprogram', 'styles', 'components.wxss');
+  const css = require('node:fs').readFileSync(CSS_PATH, 'utf8');
+  const CSS_BADGES = [...css.matchAll(/\.dipi-badge--([a-z-]+)\s*\{/g)].map((m) => m[1])
+    .filter((c) => c !== 'solid' && c !== 'sm');
+  assert.ok(CSS_BADGES.includes(body.data.statusBadge),
+    `statusBadge 必须是已定义类名后缀：${body.data.statusBadge}（CSS 现有：${CSS_BADGES.join(',')}）`);
   assert.equal(body.data.canUserPay, true);
   assert.equal(body.data.canUserReview, false);
   assert.ok(Array.isArray(body.data.timeline));
@@ -732,7 +840,7 @@ test('GET /api/v1/me 返回个人资料与 orderStats 四格统计', async () =>
   assert.equal(body.data.userId, 'us_000001');
   assert.ok('favoritesCount' in body.data);
   assert.ok(body.data.orderStats, '必须含 orderStats 聚合');
-  for (const k of ['pendingPayment', 'ongoing', 'pendingConfirm', 'refunding']) {
+  for (const k of ['pendingPayment', 'ongoing', 'pendingConfirm', 'refunded']) {
     assert.ok(k in body.data.orderStats, `orderStats 缺少 ${k}`);
     assert.equal(typeof body.data.orderStats[k], 'number');
   }

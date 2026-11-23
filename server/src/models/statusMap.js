@@ -58,33 +58,57 @@ const STATUS_TEXT = {
   refunded: '已退款',
 };
 
-/** 状态 → 徽章类 */
+/**
+ * 状态 → 徽章类（样式决策）
+ * ---------------------------------------------------------------------------
+ * 取值**必须**是 components.wxss 里真实存在的类名后缀，否则样式丢失：
+ *   .dipi-badge--pending   warning-100 / warning-700
+ *   .dipi-badge--confirmed info-100    / info-700
+ *   .dipi-badge--ongoing   brand-100   / brand-700
+ *   .dipi-badge--review    accent-100  / accent-700
+ *   .dipi-badge--refunding accent-100  / accent-700
+ *   .dipi-badge--done      success-100 / success-700
+ *   .dipi-badge--closed    ink-100     / ink-500
+ *   .dipi-badge--refund    error-100   / error-700
+ *   .dipi-badge--dispute   error-100   / error-700
+ *
+ * 多个状态共用一个 badge（按视觉紧迫度归并），语义靠 status（语义身份）/ statusText 区分。
+ */
 const STATUS_BADGE = {
-  pendingPayment: 'pending',
-  pendingAccept: 'confirmed',
-  accepted: 'confirmed',
-  inService: 'ongoing',
-  pendingConfirm: 'review',
-  completed: 'done',
-  cancelled: 'closed',
-  closed: 'closed',
-  refunding: 'refund',
-  refunded: 'closed',
+  pendingPayment: 'pending',      // 还没确认，有时限 → warning
+  pendingAccept: 'pending',       // 还没确认，有时限 → warning
+  accepted: 'ongoing',            // 已确认，等开始 → brand
+  inService: 'ongoing',           // 在推进中 → brand
+  pendingConfirm: 'review',       // 等你行动（暖色＝行动召唤）→ accent
+  completed: 'done',              // 顺利完成 → success
+  cancelled: 'closed',            // 已结束 → ink
+  closed: 'closed',               // 已结束 → ink
+  refunding: 'refunding',         // 等你关注 → accent
+  refunded: 'closed',             // 已结束 → ink
 };
 
-/** 状态 → 功能色语义 */
-const STATUS_TONE = {
-  pendingPayment: 'warning',
-  pendingAccept: 'info',
-  accepted: 'brand',
-  inService: 'brand',
-  pendingConfirm: 'accent',
-  completed: 'success',
-  cancelled: 'ink',
+/**
+ * 徽章类 → 功能色语义
+ * ---------------------------------------------------------------------------
+ * 与 components.wxss 的实际配色严格一致（statusTone 是「色弱 / 单色模式」
+ * 的第二重信息，必须与徽章底色同色系，否则两个通道会互相矛盾）。
+ */
+const BADGE_TONE = {
+  pending: 'warning',
+  confirmed: 'info',
+  ongoing: 'brand',
+  review: 'accent',
+  refunding: 'accent',
+  done: 'success',
   closed: 'ink',
-  refunding: 'error',
-  refunded: 'ink',
+  refund: 'error',
+  dispute: 'error',
 };
+
+/** 状态 → 功能色语义（由徽章类推导，保证两通道一致） */
+const STATUS_TONE = Object.fromEntries(
+  Object.entries(STATUS_BADGE).map(([status, badge]) => [status, BADGE_TONE[badge]])
+);
 
 /**
  * 状态 → 用户可执行操作标志
@@ -135,7 +159,7 @@ function allowedUserActions(status) {
  */
 function statusView(status) {
   return {
-    status,
+    status,                       // 语义身份（与 ?status= 过滤参数同名对齐）
     statusText: STATUS_TEXT[status] || status,
     statusBadge: STATUS_BADGE[status] || 'closed',
     statusTone: STATUS_TONE[status] || 'ink',
@@ -167,6 +191,7 @@ module.exports = {
   STATUS_TEXT,
   STATUS_BADGE,
   STATUS_TONE,
+  BADGE_TONE,
   UNIT_TEXT,
   UNIT_ENUM,
   statusFlags,

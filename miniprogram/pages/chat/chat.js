@@ -471,7 +471,14 @@ Page({
   },
 
   /**
-   * WS 收到新消息 → 追加 + seq 去重
+   * WS 收到新消息 → 追加 + 跨通道去重
+   * ---------------------------------------------------------------------------
+   * 【跨通道去重键 = clientMessageId】(G-92)
+   *   HTTP 与 WS 是服务端两条独立路径，同一逻辑消息经两条通道到达时
+   *   **服务端可能各落一条，messageId 与 seq 都不同** → 用 messageId 去重会漏。
+   *   服务端按 (conversationId, clientMessageId) 幂等，回推时原样带回 clientMessageId，
+   *   客户端据此对账。
+   *   （历史补拉仍按 messageId / seq 去重 —— 历史消息没有客户端 clientMessageId）
    * @param {object} payload { conversationId, message }
    */
   handleMessageNew: function (payload) {
@@ -481,12 +488,33 @@ Page({
     const message = payload.message;
     if (!message) return;
 
-    const messages = this.data.messages.slice();
-    // 按 messageId 去重（重发场景）
-    for (let i = 0; i < messages.length; i++) {
-      if (messages[i].messageId === message.messageId) return;
-    }
     const normalized = api.normalizeMessage(message);
+    const messages = this.data.messages.slice();
+
+    // ① 跨通道去重：同一 clientMessageId 已存在 → 用服务端回执替换本地那条
+    if (normalized.clientMessageId) {
+      let hit = -1;
+      for (let i = 0; i < messages.length; i++) {
+        if (messages[i].clientMessageId === normalized.clientMessageId) {
+          hit = i;
+          break;
+        }
+      }
+      if (hit >= 0) {
+        // 已有同 clientMessageId 的消息 → 合并服务端字段，不重复插入
+        messages[hit] = Object.assign({}, messages[hit], normalized, { status: 'sent' });
+        this.setData({ messages: messages });
+        this.updateLastSeq();
+        if (this._atBottom) this.scrollToBottom();
+        return;
+      }
+    }
+
+    // ② 同通道去重：messageId 相同 → 已插入过
+    for (let i = 0; i < messages.length; i++) {
+      if (messages[i].messageId === normalized.messageId) return;
+    }
+
     messages.push(normalized);
     this.setData({ messages: messages });
     this.updateLastSeq();

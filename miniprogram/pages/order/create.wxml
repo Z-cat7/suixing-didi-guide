@@ -139,7 +139,7 @@
           <text class="order-create__service-desc">{{item.description}}</text>
           <text wx:if="{{item.maxTravelers}}" class="order-create__service-desc">最多 {{item.maxTravelers}} 人</text>
         </view>
-        <price-tag amount="{{item.priceAmount}}" unit="{{item.priceUnit}}" />
+        <price-tag amount="{{item.priceAmount}}" unit="{{item.priceUnit}}" unit-text="{{item.priceUnitText}}" />
       </view>
     </view>
 
@@ -157,7 +157,7 @@
             bindtap="onTravelersMinus"
             aria-role="button"
             aria-label="减少同行人数，当前 {{travelers}} 人"
-            aria-disabled="{{travelers <= 1}}"
+            aria-disabled="{{travelers <= minTravelers}}"
           >
             −
           </view>
@@ -243,9 +243,9 @@
     <!-- 金额明细（实时算价预览，提交后以服务端返回为准） -->
     <view class="dipi-card order-create__card">
       <text class="order-create__section-title" aria-role="heading" aria-level="2">费用说明</text>
-      <view class="order-create__price-row" aria-label="服务金额 {{priceYuan}} 元">
+      <view class="order-create__price-row" aria-label="服务金额 {{subtotalYuan}} 元">
         <text class="order-create__price-label">服务金额</text>
-        <text class="order-create__price-value">¥{{priceYuan}}</text>
+        <text class="order-create__price-value">¥{{subtotalYuan}}</text>
       </view>
       <view wx:if="{{extraAmount}}" class="order-create__price-row" aria-label="附加项 {{extraYuan}} 元">
         <text class="order-create__price-label">附加项</text>

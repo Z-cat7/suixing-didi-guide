@@ -102,11 +102,58 @@ test('订单状态常量为 camelCase（无 snake 命名的常量）', () => {
   assert.deepEqual(hits, [], `发现 snake 状态常量：\n${hits.join('\n')}`);
 });
 
-test('订单状态输出不含 statusCode 字段', () => {
-  const orderService = fs.readFileSync(path.join(SRC, 'services', 'orderService.js'), 'utf8');
-  assert.ok(!/statusCode/.test(orderService), 'orderService 不应输出 statusCode');
-  const statusMap = fs.readFileSync(path.join(SRC, 'models', 'statusMap.js'), 'utf8');
-  assert.ok(!/statusCode/.test(statusMap), 'statusMap 不应输出 statusCode');
+test('订单状态输出不含 statusCode / statusCode 同义键', () => {
+  for (const f of ['services/orderService.js', 'models/statusMap.js']) {
+    const text = fs.readFileSync(path.join(SRC, ...f.split('/')), 'utf8');
+    assert.ok(!/statusCode/.test(text), `${f} 不应出现 statusCode`);
+    assert.ok(!/statusKey/.test(text), `${f} 不应出现 statusKey（与 status 等价的同义重复键）`);
+  }
+});
+
+test('statusBadge 取值必须与 components.wxss 真实存在的类名一致', () => {
+  // 订单徽章白名单（与客户端 C11 双向断言同一集合，Phase 1 v1.1）
+  //   confirmed 不在白名单：它是「非订单类信息徽章」专用（系统通知/处理中/平台介入中）
+  //   dispute / refund 当前无订单状态映射，属视觉层预留
+  const ORDER_BADGE_WHITELIST = [
+    'pending', 'ongoing', 'review', 'refunding', 'done', 'closed', 'dispute', 'refund',
+  ];
+
+  const CSS_PATH = path.resolve(__dirname, '..', '..', 'miniprogram', 'styles', 'components.wxss');
+  assert.ok(fs.existsSync(CSS_PATH), `找不到 CSS 文件：${CSS_PATH}`);
+  const css = fs.readFileSync(CSS_PATH, 'utf8');
+  const cssClasses = new Set(
+    [...css.matchAll(/\.dipi-badge--([a-z-]+)\s*\{/g)].map((m) => m[1])
+      .filter((c) => c !== 'solid' && c !== 'sm')
+  );
+
+  // 双向一：白名单里的每个类，CSS 必须真实定义
+  for (const badge of ORDER_BADGE_WHITELIST) {
+    assert.ok(cssClasses.has(badge), `白名单类 ${badge} 在 components.wxss 中不存在`);
+  }
+
+  // 双向二：服务端下发的每个 badge，必须在白名单内（进而也必然在 CSS 内）
+  const { STATUS_BADGE } = require('../src/models/statusMap');
+  const used = new Set(Object.values(STATUS_BADGE));
+  for (const badge of used) {
+    assert.ok(cssClasses.has(badge), `statusBadge 下发了 CSS 中不存在的类：${badge}`);
+    assert.ok(
+      ORDER_BADGE_WHITELIST.includes(badge),
+      `statusBadge 下发了不在订单徽章白名单内的类：${badge}`
+    );
+  }
+
+  const unused = ORDER_BADGE_WHITELIST.filter((c) => !used.has(c));
+  if (unused.length) {
+    console.log(`      [info] 白名单中暂无订单状态映射的类（视觉层预留）：${unused.join(', ')}`);
+  }
+});
+
+test('STATUS_BADGE 的键集合恰好等于 10 个订单状态枚举', () => {
+  const { STATUS_BADGE, ALL_STATUSES } = require('../src/models/statusMap');
+  const badgeKeys = Object.keys(STATUS_BADGE).sort();
+  const statuses = [...ALL_STATUSES].sort();
+  assert.equal(STATUS_BADGE && badgeKeys.length, 10, `STATUS_BADGE 应有 10 项，实际 ${badgeKeys.length}`);
+  assert.deepEqual(badgeKeys, statuses, 'STATUS_BADGE 的键必须恰好是 10 个订单状态');
 });
 
 /* ---------------------------------------------------------------------------

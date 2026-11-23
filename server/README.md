@@ -54,13 +54,75 @@ node scripts/shutdown-check.js # 优雅退出 + 落盘自检
 | `PORT` | `3000` | 监听端口（HTTP 与 WS 同端口） |
 | `HOST` | `0.0.0.0` | 监听地址 |
 | `DATA_DIR` | `<server>/data` | JSON 数据目录 |
-| `TOKEN_SECRET` | 随机 32 字节 | **生产必须固定**，否则重启后旧 token 全部失效 |
+| `TOKEN_SECRET` | 随机 32 字节 | 🔴 **生产必须固定**，否则重启后旧 token 全部失效（见下方醒目提示） |
 | `TOKEN_TTL_SECONDS` | `604800`（7 天） | token 有效期 |
 | `ENABLE_MOCK_LOGIN` | `true` | 是否允许 mock 登录（上线请置 `false`） |
 | `WECHAT_APP_ID` / `WECHAT_APP_SECRET` | 空 | 微信小程序凭据；为空时只能用 mock 登录 |
 | `DEFAULT_PAGE_SIZE` / `MAX_PAGE_SIZE` | `10` / `50` | 分页默认与上限 |
 | `WS_HEARTBEAT_INTERVAL_MS` | `30000` | WS 巡检间隔 |
 | `WS_HEARTBEAT_TIMEOUT_MS` | `90000` | WS 无响应断开阈值 |
+
+---
+
+## 2.1 🔴 生产部署必须固定 `TOKEN_SECRET`
+
+> **默认的 `TOKEN_SECRET` 是进程启动时随机生成的 32 字节密钥。**
+> 服务一旦重启（发布、扩缩容、崩溃恢复），**所有已签发的 token 立即全部失效**，用户被强制登出；
+> 且多实例部署时各实例密钥不同，token 在实例间无法互认。
+
+生产环境**必须**通过环境变量注入一个**固定的高强度密钥**：
+
+```bash
+# 生成一次并妥善保存（所有实例共用同一个）
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+
+# 注入后启动
+TOKEN_SECRET=<上面生成的值> npm start
+```
+
+同理建议固定 `DATA_DIR`（多实例需共享或各自独立，避免数据分叉）。
+
+---
+
+## 2.2 ⚠️ 金额单位对照（最高频的踩坑点）
+
+**服务端内部全程用「分」计算与存储，响应体一律输出整数分。**
+**唯一例外：列表查询的 `minPrice` / `maxPrice` 两个查询参数用「元」。**
+
+| 位置 | 字段 | 单位 | 示例 |
+|---|---|---|---|
+| **查询参数**（列表筛选） | `minPrice` / `maxPrice` | **元** | `?minPrice=100&maxPrice=300` |
+| **响应体** | `priceAmount`（地陪起价 / 服务项单价） | **分** | `8800` = ¥88 |
+| **响应体** | `unitPriceAmount`（订单成交单价） | **分** | `16800` = ¥168 |
+| **响应体** | `subtotalAmount`（服务小计） | **分** | `100800` = ¥1008 |
+| **响应体** | `discountAmount` / `totalAmount` / `extraAmount` / `refundAmount` | **分** | `90720` = ¥907.20 |
+| **筛选面板** | `filter-options.priceRange.min` / `.max` | **元** | `88` / `588` |
+| **筛选面板** | `filter-options.priceRange.minAmount` / `.maxAmount` | **分** | `8800` / `58800` |
+
+**客户端怎么用**
+- 筛选值从 `filter-options.priceRange` 取 —— 那里 `min`/`max` 已是**元**，直接当 `minPrice`/`maxPrice` 传，**不要再乘 100**。
+- 展示金额用 `xxxAmount ÷ 100`，并按「元」格式化（`formatYuan(amount) = (amount / 100).toFixed(2)`）。
+- **提交订单时不要传任何价格字段**，服务端按服务项单价重算（传了也会被忽略）。
+
+> 这套「入参用元、出参用分」的不一致是**刻意设计**：查询参数用元符合人类输入习惯，响应体用分避免浮点误差。
+> 详见 `dipi/docs/03-api-contract.md` §0 TL;DR 第 4 条的醒目提示。
+
+---
+
+## 2.3 订单徽章白名单（与客户端 C11 双向夹逼）
+
+服务端下发的 `statusBadge` **只可能是** `components.wxss` 里已定义的类名后缀，否则徽章会掉回默认样式。
+
+| 类 | 用途 | 是否有订单状态映射 |
+|---|---|---|
+| `pending` `ongoing` `review` `refunding` `done` `closed` | 订单状态徽章 | ✅ 6 个在用 |
+| `dispute` | 纠纷 / 异常（error 红） | 预留（当前 10 态无纠纷态） |
+| `refund` | `dispute` 的已废弃兼容别名（同色 error），保留以兼容既有白名单 | 预留 |
+| `confirmed` | **非订单类信息徽章**专用（系统通知 / 处理中 / 平台介入中） | ❌ 订单状态不使用 |
+
+**两道机器守卫**（防止视觉层改了类名而服务端没跟，或反之）：
+- `server/test/contract.test.js` —— 断言「白名单每个类 CSS 必须定义」+「服务端每个 badge 必须在白名单内」+「`STATUS_BADGE` 键集合恰好等于 10 个订单状态」
+- `server/scripts/verify.js` 【5c】—— 同样两项断言（运行时版本）
 
 ---
 
@@ -324,4 +386,4 @@ npm test
 - 未实现订单超时自动流转（`pendingPayment → closed` / `pendingAccept → closed`）的定时任务，需外部调度器调用 `POST /api/v1/orders/:orderId/close`。
 - JSON 文件存储适合开发与演示；生产建议换成 SQLite / PostgreSQL（仅需替换 `src/db/store.js`）。
 - WebSocket 未做集群广播（多实例部署需引入 Redis Pub/Sub）。
-- 时段核销粒度为「服务项 + slotId」，同一时段下不同服务项互不影响。
+- 时段核销粒度为「**地陪 + slotId**」（地陪级全局唯一）：地陪是一个真人，同一天同一时段只能陪一个人，故其名下所有服务项共享同一批占用记录。

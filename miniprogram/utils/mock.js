@@ -535,17 +535,72 @@ const NOTICES = [
  * ========================================================================== */
 
 /**
- * mock 服务端行为：依据状态推导可执行操作位
- * （这是 mock 扮演服务端的职责，前端页面依旧只渲染这些布尔位）
+ * mock 服务端行为：依据状态推导徽章样式与可执行操作
+ * ---------------------------------------------------------------------------
+ * ⚠️ 这是 **mock 扮演服务端** 的职责（与真实服务端 statusMap.js 同源），
+ *    **不是前端页面的状态换算**。前端页面只渲染服务端下发的：
+ *    - `statusBadge`（样式决策）
+ *    - `allowedActions[]`（按钮显隐的唯一依据）
+ *    - 6 个 `canUserXxx` 布尔位（与 allowedActions 同源）
  */
+
+/**
+ * 状态 → 徽章类名后缀（对应 components.wxss 的 .dipi-badge--*）
+ * 与服务端 models/statusMap.js 的 STATUS_BADGE 严格一致
+ */
+const MOCK_STATUS_BADGE = {
+  pendingPayment: 'pending',
+  pendingAccept: 'pending',
+  accepted: 'ongoing',
+  inService: 'ongoing',
+  pendingConfirm: 'review',
+  completed: 'done',
+  cancelled: 'closed',
+  closed: 'closed',
+  refunding: 'refunding',
+  refunded: 'closed',
+};
+
+/** 状态 → 功能色语义（statusTone，7 值；色弱/单色模式的第二重信息） */
+const MOCK_STATUS_TONE = {
+  pendingPayment: 'warning',
+  pendingAccept: 'warning',
+  accepted: 'brand',
+  inService: 'brand',
+  pendingConfirm: 'accent',
+  completed: 'success',
+  cancelled: 'ink',
+  closed: 'ink',
+  refunding: 'accent',
+  refunded: 'ink',
+};
+
+/** 状态 → 状态中文文案 */
+const MOCK_STATUS_TEXT = {
+  pendingPayment: '待支付',
+  pendingAccept: '待接单',
+  accepted: '已接单',
+  inService: '服务中',
+  pendingConfirm: '待确认',
+  completed: '已完成',
+  cancelled: '已取消',
+  closed: '已关闭',
+  refunding: '退款中',
+  refunded: '已退款',
+};
+
+/** 用户可执行动作的固定顺序 */
+const MOCK_USER_ACTION_ORDER = ['pay', 'cancel', 'confirm', 'refund', 'contact', 'review'];
+
 function computeActions(status) {
-  return {
+  const flags = {
     canUserPay: status === ORDER_STATUS.PENDING_PAYMENT,
     canUserCancel:
       status === ORDER_STATUS.PENDING_PAYMENT ||
       status === ORDER_STATUS.PENDING_ACCEPT ||
       status === ORDER_STATUS.ACCEPTED,
-    canUserConfirm: status === ORDER_STATUS.PENDING_CONFIRM,
+    // T24：inService 也可 confirm（地陪漏点「结束服务」时的兜底通道）
+    canUserConfirm: status === ORDER_STATUS.IN_SERVICE || status === ORDER_STATUS.PENDING_CONFIRM,
     canUserRefund:
       status === ORDER_STATUS.IN_SERVICE ||
       status === ORDER_STATUS.PENDING_CONFIRM ||
@@ -557,6 +612,19 @@ function computeActions(status) {
       status !== ORDER_STATUS.REFUNDED,
     canUserReview: status === ORDER_STATUS.COMPLETED,
   };
+  const map = {
+    pay: flags.canUserPay,
+    cancel: flags.canUserCancel,
+    confirm: flags.canUserConfirm,
+    refund: flags.canUserRefund,
+    contact: flags.canUserContact,
+    review: flags.canUserReview,
+  };
+  return Object.assign({}, flags, {
+    allowedActions: MOCK_USER_ACTION_ORDER.filter(function (a) {
+      return map[a];
+    }),
+  });
 }
 
 function makeOrder(overrides) {
@@ -566,8 +634,11 @@ function makeOrder(overrides) {
     {
       orderId: 'ord_mock_0001',
       orderNo: 'SX20261123001',
-      status: status,
-      statusText: '',
+      // —— 状态四维度（服务端下发，前端只渲染）——
+      status: status, // ① 语义身份
+      statusText: MOCK_STATUS_TEXT[status] || status, // ② 中文文案
+      statusBadge: MOCK_STATUS_BADGE[status] || 'closed', // ③ 样式决策（CSS 类名后缀）
+      statusTone: MOCK_STATUS_TONE[status] || 'ink', // ④ 功能色语义
       userId: 'u_102395',
       guideId: 'g_2051',
       guideName: '阿May',
@@ -582,12 +653,16 @@ function makeOrder(overrides) {
       durationHours: 3,
       endAt: isoOffset(23),
       travelers: 2,
-      priceAmount: 36000,
+      // —— 金额：全部整数分；订单对象**没有**裸 priceAmount（G-91）——
+      unitPriceAmount: 36000, // 服务单价（分）
+      subtotalAmount: 72000, // 小计（分）= unitPriceAmount × travelers
       extraAmount: 0,
-      totalAmount: 36000,
       discountAmount: 0,
+      totalAmount: 72000, // 应付总额（分）= subtotal + extra − discount
+      refundAmount: 0,
       currency: 'CNY',
       priceUnit: 'session',
+      priceUnitText: '次',
       remark: '不吃辣，多点一份汤',
       contactName: '小满',
       contactPhone: '138****5678',
@@ -639,8 +714,9 @@ const ORDERS = [
     serviceId: 'si_7711',
     serviceName: '城墙徒步讲解 2 小时',
     city: '南京',
+    unitPriceAmount: 20000,
+    subtotalAmount: 20000,
     totalAmount: 20000,
-    priceAmount: 20000,
     scheduledAt: isoOffset(-1),
     endAt: isoOffset(1),
     paidAt: isoOffset(-26),
@@ -664,8 +740,9 @@ const ORDERS = [
     serviceId: 'si_5521',
     serviceName: '外滩源街拍 2 小时',
     city: '上海',
+    unitPriceAmount: 30000,
+    subtotalAmount: 30000,
     totalAmount: 30000,
-    priceAmount: 30000,
     scheduledAt: isoOffset(-72),
     endAt: isoOffset(-70),
     paidAt: isoOffset(-80),
@@ -689,8 +766,9 @@ const ORDERS = [
     serviceId: 'si_5521',
     serviceName: '外滩源街拍 2 小时',
     city: '上海',
+    unitPriceAmount: 30000,
+    subtotalAmount: 30000,
     totalAmount: 30000,
-    priceAmount: 30000,
     cancelReason: '计划有变',
     cancelledAt: isoOffset(-120),
     timeline: [
@@ -734,7 +812,6 @@ const USER = {
     pendingPayment: 1,
     ongoing: 1,
     pendingConfirm: 0,
-    refunding: 0,
     refunded: 0,
   },
   favoriteCount: 1,
@@ -952,15 +1029,16 @@ function findGuide(guideId) {
 }
 
 /** 订单列表过滤（状态分栏） */
-function filterOrders(tab) {
-  if (!tab || tab === 'all') return ORDERS.slice();
-  if (tab === 'ongoing') {
-    return ORDERS.filter((o) => o.status === ORDER_STATUS.ACCEPTED || o.status === ORDER_STATUS.IN_SERVICE);
-  }
-  if (tab === 'refunding') {
-    return ORDERS.filter((o) => o.status === ORDER_STATUS.REFUNDING || o.status === ORDER_STATUS.REFUNDED);
-  }
-  return ORDERS.filter((o) => o.status === tab);
+function filterOrders(statusQuery) {
+  // status 是**逗号分隔的状态枚举**（与服务端一致），不是展示分桶名
+  if (!statusQuery) return ORDERS.slice();
+  const wanted = String(statusQuery).split(',').map(function (s) {
+    return s.trim();
+  }).filter(Boolean);
+  if (!wanted.length) return ORDERS.slice();
+  return ORDERS.filter(function (o) {
+    return wanted.indexOf(o.status) >= 0;
+  });
 }
 
 /** 构造订单新增（mock 下单） */
@@ -970,7 +1048,8 @@ function createMockOrder(body) {
   const serviceItem = services.filter((s) => s.serviceId === body.serviceId)[0] || services[0];
   const orderId = 'ord_mock_' + Date.now();
   const travelers = body.travelers || 1;
-  const priceAmount = (serviceItem ? serviceItem.priceAmount : guide.priceAmount) * travelers;
+  const unitPriceAmount = serviceItem ? serviceItem.priceAmount : guide.priceAmount;
+  const subtotalAmount = unitPriceAmount * travelers;
   // slotId 原样保留（服务端据此原子核销时段）；mock 据此反查展示用的服务时间
   const slot = findSlotById(guide, body.slotId);
   const order = makeOrder({
@@ -988,8 +1067,9 @@ function createMockOrder(body) {
     scheduledAt: slot ? slot.scheduledAt : isoOffset(24),
     endAt: slot ? slot.endAt : isoOffset(27),
     travelers: travelers,
-    priceAmount: priceAmount,
-    totalAmount: priceAmount,
+    unitPriceAmount: unitPriceAmount,
+    subtotalAmount: subtotalAmount,
+    totalAmount: subtotalAmount,
     expireAt: isoOffset(0.25),
     remark: body.remark || '',
     meetingPoint: body.meetingPoint || '',
@@ -1098,7 +1178,7 @@ function handle(method, path, query, body) {
       const r = Number(rating);
       list = list.filter((g) => g.rating >= r);
     }
-    const sort = query.sortBy || query.sort || 'default';
+    const sort = query.sort || 'recommend';
     if (sort === 'priceAsc' || sort === 'price_asc') list.sort((a, b) => a.priceAmount - b.priceAmount);
     else if (sort === 'priceDesc' || sort === 'price_desc') list.sort((a, b) => b.priceAmount - a.priceAmount);
     else if (sort === 'rating') list.sort((a, b) => b.rating - a.rating);

@@ -222,6 +222,20 @@ function createMessage(conv, payload) {
     throw unprocessable('消息内容不能超过 1000 字');
   }
 
+  // 幂等去重：按 (conversationId, clientMessageId)
+  // ---------------------------------------------------------------------------
+  // 幂等必须在服务端——客户端去重覆盖不了「HTTP 已在服务端落库、但响应在网络上
+  // 丢失、客户端超时重发」这条路径（客户端此时并不知道服务端已成功）。
+  // 作用域限定在会话内，避免跨会话碰撞。
+  // clientMessageId 生命周期（客户端负责）：用户主动新发 → 新生成；
+  // 同一次发送的失败重发/超时重试 → 复用同一个。
+  if (payload.clientMessageId) {
+    const existing = store.read('messages').find(
+      (m) => m.conversationId === conv.id && m.clientMessageId === payload.clientMessageId
+    );
+    if (existing) return existing;   // 命中 → 返回既有消息，不新建
+  }
+
   const now = new Date().toISOString();
   const seq = (conv.seq || 0) + 1;
   const msg = {

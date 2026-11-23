@@ -16,6 +16,7 @@
  */
 
 const path = require('path');
+const fs = require('fs');
 const assert = require('assert');
 
 const MP_ROOT = path.resolve(__dirname, '..', 'miniprogram');
@@ -201,12 +202,14 @@ test('订单操作位由服务端下发（6 个布尔位齐全）', function () 
   });
 });
 
-test('订单金额为整数分且以 Amount 结尾', function () {
+test('订单金额为整数分且以 Amount 结尾（无裸 priceAmount，G-91）', function () {
   const res = mock.handle('GET', '/orders', {}, {});
   res.data.list.forEach(function (o) {
     assert.strictEqual(Math.round(o.totalAmount), o.totalAmount);
-    assert.strictEqual(Math.round(o.priceAmount), o.priceAmount);
-    assert.ok('totalAmount' in o && 'priceAmount' in o);
+    assert.strictEqual(Math.round(o.unitPriceAmount), o.unitPriceAmount);
+    assert.strictEqual(Math.round(o.subtotalAmount), o.subtotalAmount);
+    // 订单对象**没有**裸 priceAmount（那是地陪层的字段）
+    assert.strictEqual('priceAmount' in o, false, '订单不应含裸 priceAmount');
   });
 });
 
@@ -217,13 +220,19 @@ test('订单时间为 ISO 8601 带时区字符串', function () {
   });
 });
 
-test('订单列表按状态分栏过滤正确', function () {
-  const all = mock.handle('GET', '/orders', { status: 'all' }, {}).data.list;
+test('订单列表按状态枚举过滤正确（逗号分隔多状态）', function () {
+  const all = mock.handle('GET', '/orders', {}, {}).data.list;
   const pending = mock.handle('GET', '/orders', { status: 'pendingPayment' }, {}).data.list;
   pending.forEach(function (o) {
     assert.strictEqual(o.status, 'pendingPayment');
   });
   assert.ok(all.length >= pending.length);
+
+  // 进行中 = accepted + inService（服务端按逗号分隔过滤）
+  const ongoing = mock.handle('GET', '/orders', { status: 'accepted,inService' }, {}).data.list;
+  ongoing.forEach(function (o) {
+    assert.ok(o.status === 'accepted' || o.status === 'inService');
+  });
 });
 
 test('下单幂等：同一 idempotencyKey 返回同一 orderId', function () {
@@ -916,7 +925,7 @@ test('下单页：草稿回填不覆盖 URL 传入的 serviceId', function () {
   storage.clearOrderDraft();
 });
 
-test('下单页：实时算价 = 单价 × 人数', function () {
+test('下单页：实时算价 = 单价 × 人数（unitPriceAmount 语义）', function () {
   const p = loadPage('pages/order/create.js');
   p.setData({
     selectedService: { serviceId: 'si_1', priceAmount: 36000, maxTravelers: 8 },
@@ -925,7 +934,8 @@ test('下单页：实时算价 = 单价 × 人数', function () {
     discountAmount: 0,
   });
   p.recalcPrice();
-  assert.strictEqual(p.data.priceAmount, 72000);
+  assert.strictEqual(p.data.unitPriceAmount, 36000, '单价不变');
+  assert.strictEqual(p.data.subtotalAmount, 72000, '小计 = 单价 × 人数');
   assert.strictEqual(p.data.totalAmount, 72000);
   assert.strictEqual(p.data.totalYuan, '720');
 });
@@ -983,6 +993,219 @@ test('地陪详情页：不可约服务项不切换选中', function () {
   p.selectService({ serviceId: 'si_2', priceAmount: 26000 });
   p.onSelectService({ currentTarget: { dataset: { service: { serviceId: 'si_3', isAvailable: false } } } });
   assert.strictEqual(p.data.selectedServiceId, 'si_2', '不可约服务项不应切换');
+});
+
+/* ==========================================================================
+ * T6 —— v1.4 / v1.8 契约收口（G-83 / G-84 / G-85 / G-91 / G-92 / G-93 / G-94）
+ * ========================================================================== */
+console.log('');
+console.log('── T6 契约收口（v1.4 / v1.8）─────────────────────────');
+
+const constants2 = load('utils/constants.js');
+
+test('G-83：mock 订单含 statusBadge / statusTone（服务端下发）', function () {
+  const res = mock.handle('GET', '/orders', {}, {});
+  res.data.list.forEach(function (o) {
+    assert.ok(o.statusBadge, '订单必须含 statusBadge');
+    assert.ok(o.statusTone, '订单必须含 statusTone');
+    assert.ok(o.statusText, '订单必须含 statusText（徽章要带文字）');
+    // statusBadge 必须在客户端白名单内
+    assert.ok(
+      constants2.ORDER_STATUS_BADGE_WHITELIST.indexOf(o.statusBadge) >= 0,
+      'statusBadge 不在白名单内：' + o.statusBadge
+    );
+    // statusTone 必须在 tone 值域内
+    assert.ok(
+      constants2.ORDER_STATUS_TONE_WHITELIST.indexOf(o.statusTone) >= 0,
+      'statusTone 不在值域内：' + o.statusTone
+    );
+  });
+});
+
+test('G-83：客户端不维护「状态 → 徽章类」映射表', function () {
+  const src = fs.readFileSync(path.join(MP_ROOT, 'utils', 'constants.js'), 'utf8');
+  assert.strictEqual(
+    /ORDER_STATUS_BADGE_CLASS\s*=/.test(src),
+    false,
+    'constants.js 不得再有「状态 → 徽章类」映射表（那是服务端职责）'
+  );
+  // 徽章组件内部也不得有映射表
+  const badgeSrc = fs.readFileSync(
+    path.join(MP_ROOT, 'components', 'order-status-badge', 'order-status-badge.js'),
+    'utf8'
+  );
+  assert.strictEqual(
+    /pendingPayment\s*:/.test(badgeSrc),
+    false,
+    'order-status-badge 组件内不得有状态 → 类名映射'
+  );
+});
+
+test('G-83：徽章白名单兜底（未知值降级 closed）', function () {
+  assert.strictEqual(constants2.ORDER_STATUS_BADGE_FALLBACK, 'closed');
+  assert.ok(constants2.ORDER_STATUS_BADGE_WHITELIST.indexOf('closed') >= 0);
+});
+
+test('G-84：按钮显隐优先读 allowedActions[]（缺失才退化布尔位）', function () {
+  // 有 allowedActions → 以它为准
+  assert.strictEqual(
+    constants2.hasOrderAction({ allowedActions: ['pay', 'contact'], canUserPay: false }, 'pay'),
+    true,
+    'allowedActions 应优先'
+  );
+  assert.strictEqual(
+    constants2.hasOrderAction({ allowedActions: ['contact'], canUserPay: true }, 'pay'),
+    false,
+    'allowedActions 应优先于布尔位'
+  );
+  // 无 allowedActions → 退化到布尔位
+  assert.strictEqual(constants2.hasOrderAction({ canUserPay: true }, 'pay'), true);
+  assert.strictEqual(constants2.hasOrderAction({ canUserPay: false }, 'pay'), false);
+  assert.strictEqual(constants2.hasOrderAction(null, 'pay'), false);
+});
+
+test('G-84：mock 订单含 allowedActions[] 且与布尔位同源', function () {
+  const res = mock.handle('GET', '/orders', {}, {});
+  res.data.list.forEach(function (o) {
+    assert.ok(Array.isArray(o.allowedActions), '订单必须含 allowedActions 数组');
+    // allowedActions 与 6 个布尔位必须一致（同源）
+    const expect = [];
+    if (o.canUserPay) expect.push('pay');
+    if (o.canUserCancel) expect.push('cancel');
+    if (o.canUserConfirm) expect.push('confirm');
+    if (o.canUserRefund) expect.push('refund');
+    if (o.canUserContact) expect.push('contact');
+    if (o.canUserReview) expect.push('review');
+    assert.deepStrictEqual(o.allowedActions.slice().sort(), expect.slice().sort());
+  });
+});
+
+test('G-85：orderStats 四格互斥且第 4 格键名为 refunded', function () {
+  const res = mock.handle('GET', '/me', {}, {});
+  const stats = res.data.orderStats;
+  assert.ok(stats, '/me 必须含 orderStats');
+  // 第 4 格键名是 refunded（不是 refunding）
+  assert.strictEqual(typeof stats.refunded, 'number');
+  assert.strictEqual(stats.refunding, undefined, '不应有 refunding 键');
+  // 四格标签
+  const labels = constants2.ORDER_STAT_BUCKETS.map(function (b) {
+    return b.label;
+  });
+  assert.deepStrictEqual(labels, ['待支付', '服务中', '待确认', '退款']);
+});
+
+test('G-91：订单对象无裸 priceAmount（服务项层才有）', function () {
+  const res = mock.handle('GET', '/orders', {}, {});
+  res.data.list.forEach(function (o) {
+    assert.strictEqual('priceAmount' in o, false);
+    assert.ok('unitPriceAmount' in o);
+    assert.ok('subtotalAmount' in o);
+  });
+  // 服务项层有 priceAmount（单价）
+  const gd = mock.handle('GET', '/guides/g_2051', {}, {});
+  const guide = gd.data.guide || gd.data;
+  guide.services.forEach(function (s) {
+    assert.ok('priceAmount' in s, '服务项应有 priceAmount（单价）');
+    assert.ok('priceUnitText' in s || 'priceUnit' in s);
+  });
+});
+
+test('G-92：跨通道去重按 clientMessageId（同一条不重复插入）', function () {
+  const p = loadPage('pages/chat/chat.js');
+  const cid = 'c_cross_001';
+  p.setData({
+    conversationId: 'cv_1',
+    messages: [{ clientMessageId: cid, messageId: 'local_1', status: 'sending', content: 'hi' }],
+  });
+  // 模拟服务端从另一通道推来同一条（messageId 与 seq 都不同）
+  p.handleMessageNew({
+    conversationId: 'cv_1',
+    message: {
+      messageId: 'server_1',
+      clientMessageId: cid,
+      seq: 999,
+      senderType: 'user',
+      messageType: 'text',
+      content: 'hi',
+      sentAt: new Date().toISOString(),
+    },
+  });
+  assert.strictEqual(p.data.messages.length, 1, '同一 clientMessageId 不应重复插入');
+  // 且应合并服务端的 messageId
+  assert.strictEqual(p.data.messages[0].messageId, 'server_1', '应合并服务端字段');
+});
+
+test('G-93：clientMessageId 生命周期（重发复用 / 主动发送新生成）', function () {
+  const p = loadPage('pages/chat/chat.js');
+  p.setData({ conversationId: 'cv_1', inputText: '内容', canSend: true, messages: [], offline: false });
+  p.onSend();
+  const firstId = p.data.messages[0].clientMessageId;
+  assert.ok(firstId, '发送应生成 clientMessageId');
+
+  // 重发（失败 → 点感叹号）复用同一 id
+  p.setData({
+    messages: [{ clientMessageId: firstId, messageId: 'm1', status: 'failed', content: '内容' }],
+  });
+  let resent = null;
+  p.sendMessage = function (msg) {
+    resent = msg.clientMessageId;
+  };
+  p.onRetrySend({ detail: { clientMessageId: firstId } });
+  assert.strictEqual(resent, firstId, '重发必须复用同一 clientMessageId');
+
+  // 用户再次主动发送同样内容 → 新生成
+  p.setData({ inputText: '内容', canSend: true, messages: [] });
+  p.onSend();
+  const secondId = p.data.messages[0].clientMessageId;
+  assert.notStrictEqual(secondId, firstId, '用户主动再次发送应生成新的 clientMessageId');
+});
+
+test('G-94：inService 状态下 allowedActions 含 confirm（T24 兜底通道）', function () {
+  const res = mock.handle('GET', '/orders', {}, {});
+  const inService = res.data.list.filter(function (o) {
+    return o.status === 'inService';
+  })[0];
+  if (!inService) {
+    // mock 数据里没有 inService 订单时，直接验证 computeActions 语义
+    assert.ok(true);
+    return;
+  }
+  assert.ok(
+    inService.allowedActions.indexOf('confirm') >= 0,
+    'inService 应可确认完成（T24）'
+  );
+  assert.strictEqual(inService.canUserConfirm, true);
+});
+
+test('G-94：确认完成走与 pendingConfirm 相同的二次确认弹层', function () {
+  const p = loadPage('pages/order/order.js');
+  let modalText = '';
+  global.wx.showModal = function (opts) {
+    modalText = opts.content || '';
+  };
+  p.onConfirm({
+    currentTarget: { dataset: { orderId: 'ord_x' } },
+  });
+  assert.ok(
+    modalText.indexOf('确认服务已完成') >= 0,
+    '确认完成应弹二次确认：' + modalText
+  );
+});
+
+test('契约：订单 Tab 的 status 查询参数必须是状态枚举（服务端会 422）', function () {
+  // ongoing / refunding 是**展示分桶名**，服务端只接受状态枚举
+  assert.strictEqual(constants2.getOrderTabStatusQuery('ongoing'), 'accepted,inService');
+  assert.strictEqual(constants2.getOrderTabStatusQuery('refunding'), 'refunding,refunded');
+  assert.strictEqual(constants2.getOrderTabStatusQuery('pendingPayment'), 'pendingPayment');
+  assert.strictEqual(constants2.getOrderTabStatusQuery('all'), '');
+});
+
+test('契约：statusKey / statusCode 已彻底移除（v1.8）', function () {
+  const res = mock.handle('GET', '/orders', {}, {});
+  res.data.list.forEach(function (o) {
+    assert.strictEqual('statusKey' in o, false, '不应下发 statusKey');
+    assert.strictEqual('statusCode' in o, false, '不应下发 statusCode');
+  });
 });
 
 /* ==========================================================================

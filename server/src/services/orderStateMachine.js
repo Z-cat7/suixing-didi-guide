@@ -127,9 +127,10 @@ function transition(order, action) {
 function assertTransition(order, action) {
   const res = transition(order, action);
   if (!res.ok) {
+    const status = order.status;
     throw conflictOrderStatus(res.message, {
-      currentStatus: order.status,
-      currentStatusText: STATUS_TEXT[order.status] || order.status,
+      currentStatus: status,
+      currentStatusText: STATUS_TEXT[status] || status,
       action,
       allowedActions: allowedUserActions(status),
     });

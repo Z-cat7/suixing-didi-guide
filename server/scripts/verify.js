@@ -89,9 +89,57 @@ async function main() {
   const me = await call('GET', '/api/v1/me', { token: UT });
   const m = me.body.data;
   check('有 orderStats 四格聚合',
-    me.status === 200 && m.orderStats && ['pendingPayment', 'ongoing', 'pendingConfirm', 'refunding']
+    me.status === 200 && m.orderStats && ['pendingPayment', 'ongoing', 'pendingConfirm', 'refunded']
       .every((k) => typeof m.orderStats[k] === 'number'),
     `userId=${m.userId} orderStats=${JSON.stringify(m.orderStats)} favoritesCount=${m.favoritesCount}`);
+
+  console.log('\n【5b】orderStats 四格互斥 + allowedActions 值域');
+  const meFull = await call('GET', '/api/v1/me', { token: UT });
+  const st = meFull.body.data.orderStats;
+  const ct = meFull.body.data.orderCounts;
+  const sum4 = st.pendingPayment + st.ongoing + st.pendingConfirm + st.refunded;
+  check('orderStats 四格互斥（之和 ≤ all）',
+    st.ongoing === ct.accepted + ct.inService && sum4 <= ct.all,
+    `pendingPayment=${st.pendingPayment} ongoing=${st.ongoing}(=accepted ${ct.accepted} + inService ${ct.inService})`
+    + ` pendingConfirm=${st.pendingConfirm} refunded=${st.refunded}`
+    + ` → 四格和=${sum4} ≤ all=${ct.all}`);
+  const od = await call('GET', '/api/v1/orders?status=pendingPayment', { token: UT });
+  const o0 = od.body.data.list[0];
+  const oFull = await call('GET', `/api/v1/orders/${o0.orderId}`, { token: UT });
+  const oa = oFull.body.data.allowedActions;
+  const USER_ACT = ['pay', 'cancel', 'confirm', 'refund', 'contact', 'review'];
+  const GUIDE_ACT = ['accept', 'start', 'finish', 'close', 'refund:approve', 'refund:reject'];
+  check('allowedActions 只含用户动作、不含地陪动作',
+    oa.every((a) => USER_ACT.includes(a)) && !oa.some((a) => GUIDE_ACT.includes(a)),
+    `allowedActions=${JSON.stringify(oa)}`);
+
+  console.log('\n【5c】徽章契约（服务端侧 · 与客户端 C11 双向夹逼）');
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const CSS_PATH = path.resolve(__dirname, '..', '..', 'miniprogram', 'styles', 'components.wxss');
+  const css = fs.readFileSync(CSS_PATH, 'utf8');
+  const cssClasses = new Set(
+    [...css.matchAll(/\.dipi-badge--([a-z-]+)\s*\{/g)].map((m) => m[1])
+      .filter((c) => c !== 'solid' && c !== 'sm')
+  );
+  const { STATUS_BADGE, ALL_STATUSES } = require('../src/models/statusMap');
+  const used = new Set(Object.values(STATUS_BADGE));
+
+  // 断言 1：服务端 STATUS_BADGE 的每个取值都能在 components.wxss 里找到对应类
+  const missing = [...used].filter((b) => !cssClasses.has(b));
+  check('断言 1：每个 statusBadge 取值都能在 components.wxss 找到对应类',
+    missing.length === 0,
+    `服务端下发 ${used.size} 个取值：${[...used].sort().join(', ')}`
+    + `｜CSS 现有 ${cssClasses.size} 个：${[...cssClasses].sort().join(', ')}`
+    + (missing.length ? `｜缺失：${missing.join(', ')}` : '｜无缺失'));
+
+  // 断言 2：STATUS_BADGE 的键集合恰好等于 10 个订单状态枚举
+  const badgeKeys = Object.keys(STATUS_BADGE).sort();
+  const statuses = [...ALL_STATUSES].sort();
+  check('断言 2：STATUS_BADGE 键集合恰好等于 10 个订单状态枚举',
+    badgeKeys.length === 10 && badgeKeys.join(',') === statuses.join(','),
+    `STATUS_BADGE ${badgeKeys.length} 项 / 状态枚举 ${statuses.length} 项`
+    + `｜一致：${badgeKeys.join(',') === statuses.join(',')}`);
 
   console.log('\n【6】下单链路 / 幂等 / 时段抢占 / 非法迁移 / 越权');
   const g2 = await call('GET', '/api/v1/guides/gd_000002', { token: UT });

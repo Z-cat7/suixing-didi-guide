@@ -119,7 +119,7 @@ dipi/miniprogram/
 | 地陪详情 P7 | `/pages/guide/detail` | 照片轮播 / 身份卡 / 服务项单选 / 可约时段 / 评价展开 / 收藏 toggle / 吸底「立即预约」 | `GET /api/v1/guides/:guideId`、`PUT /api/v1/me/favorites/:guideId`、`POST /api/v1/conversations` |
 | 下单确认 P8 | `/pages/order/create` | 时段按日期分组选择 + 服务项 + 人数步进 + 联系人 + 备注 + 实时算价预览 + 幂等提交 + 草稿回填 | `GET /api/v1/guides/:guideId`、`GET /api/v1/me`、`POST /api/v1/orders` |
 | 聊天页 | `/pages/chat/chat` | 历史分页（向上前插 + 滚动补偿）/ 发送 / 失败重发 / 未读定位 / 离线草稿 / WS 状态提示 | `GET /api/v1/conversations/:id/messages`、`POST /api/v1/conversations/:id/messages`、`POST /api/v1/conversations/:id/read` |
-| 订单页 | `/pages/order/order` | 状态分栏 + 列表/详情双视图 + 支付/取消/确认完成/退款/评价（**按钮全由服务端布尔位驱动**） | `GET /api/v1/orders`、`/orders/:id`、`/orders/summary`、`POST /api/v1/orders/:id/{pay\|cancel\|confirm\|refund\|review}` |
+| 订单页 | `/pages/order/order` | 状态分栏 + 列表/详情双视图 + 支付/取消/确认完成/退款/评价（**按钮全由服务端 `allowedActions[]` 驱动**） | `GET /api/v1/orders`、`/orders/:id`、`/orders/summary`、`POST /api/v1/orders/:id/{pay\|cancel\|confirm\|refund\|review}` |
 | 消息页 | `/pages/message/message` | 会话/通知双 Tab + 未读角标 + 触底分页 + 按 `refType` 路由 | `GET /api/v1/conversations`、`GET /api/v1/notices`、`POST /api/v1/notices/read` |
 | 用户主页 | `/pages/profile/profile` | 资料编辑 / 实名状态 / 订单统计跳转 / 收藏 / 设置开关 / 退出登录 | `GET/PUT /api/v1/me`、`GET/PUT /api/v1/me/settings` |
 
@@ -129,14 +129,29 @@ dipi/miniprogram/
 
 ### 1. 订单状态铁律
 
-订单的**可执行操作完全由服务端下发**，前端只渲染，不自算：
+订单的**状态、操作、样式一律由服务端下发**，前端只渲染，不自算：
 
 ```js
-canUserPay / canUserCancel / canUserConfirm / canUserRefund / canUserContact / canUserReview
+// ① 语义身份（唯一权威）
+status          // pendingPayment / pendingAccept / accepted / inService / pendingConfirm / …
+// ② 中文文案（徽章必须与色块同时渲染，不能只靠颜色区分状态）
+statusText      // 待支付 / 待接单 / …
+// ③ 样式决策（CSS 类名后缀）
+statusBadge     // pending / ongoing / review / done / closed / refunding
+// ④ 功能色语义（色弱 / 单色模式的第二重信息）
+statusTone      // warning / info / brand / accent / success / ink / error
+// ⑤ 按钮显隐的唯一依据（与 6 个 canUserXxx 同源生成）
+allowedActions  // ['pay', 'cancel', 'confirm', 'refund', 'contact', 'review']
 ```
 
-`statusText`（状态中文文案）也由服务端下发，前端不自行翻译。
-前端仅保留一个**纯视觉**映射 `status → 徽章样式类`（UX 规范 §A.3.3），不含任何操作语义。
+前端**不做任何「状态 → 按钮 / 状态 → 徽章样式」的映射**：
+
+- **徽章**：`components/order-status-badge/` 只接收 `statusBadge` + `statusText`，
+  拼 `class="dipi-badge dipi-badge--{{badgeClass}}"`；白名单兜底（未知值 → `closed`）
+- **按钮**：`utils/constants.js` 的 `hasOrderAction(order, action)` **优先读 `allowedActions[]`**，
+  只有它缺失时才退化到 6 个 `canUserXxx` 布尔位
+- **防漂移**：`scripts/check-miniprogram.js` 动态扫 `components.wxss` 的 `.dipi-badge--*`，
+  断言与客户端白名单**完全一致**（任一侧漂移都报错）
 
 ### 2. WebSocket 封装（`utils/ws.js`）
 
@@ -170,7 +185,18 @@ canUserPay / canUserCancel / canUserConfirm / canUserRefund / canUserContact / c
 | 下单草稿 | `storage.dipi:draft:order`，变更节流 500ms 落盘，`onUnload` 立即落盘；`guideId` 不一致 → 丢弃 |
 | 聊天草稿 | `storage.dipi:draft:chat:{conversationId}`，输入 / 失焦 / `onHide` 三处落盘；恢复后**回填但不自动发送** |
 
-### 5. 最终契约要点（与 `docs/03-api-contract.md` 一致）
+### 5. ⚠️ 单位与结构（最容易踩坑的三处）
+
+| 位置 | 规则 |
+|---|---|
+| **查询参数** `minPrice` / `maxPrice` | 单位是**元** —— 与 `filter-options.priceRanges[].min/max` 同口径。**提交时不要乘 100** |
+| **响应体** `xxxAmount`（`priceAmount` / `unitPriceAmount` / `subtotalAmount` / `totalAmount` / `extraAmount` / `discountAmount` / `refundAmount`） | 单位是**分**（整数）—— 客户端按 `分 ÷ 100` 展示 |
+| **地陪详情结构** | `GET /api/v1/guides/:guideId` 返回 **`data.guide` 包裹**（取服务项用 `data.guide.services`）；**列表接口 `data.list[]` 不包裹**，每项就是地陪对象本身 |
+
+> `priceAmount` 只出现在**地陪层**（`guide.priceAmount` 起步价、`guide.services[].priceAmount` 服务项单价）；
+> **订单对象里没有**裸 `priceAmount` —— 订单只有 `unitPriceAmount`（单价）/ `subtotalAmount`（小计）/ `totalAmount`（总额）。
+
+### 6. 最终契约要点（与 `docs/03-api-contract.md` 一致）
 
 | 项 | 契约 |
 |---|---|
@@ -222,6 +248,7 @@ node dipi/scripts/verify-contract.js
 > | 价格区间 | `min`/`max`（元）/ `minAmount`/`maxAmount`（分） | 都保留，查询用「元」 |
 > | 订单统计·退款格 | `refunding` / `refunded` | `refunding` 优先，`refunded` 兜底 |
 > | 详情信封 | `data` / `data.guide` | 两者都取 |
+| 订单统计·退款格 | `refunded` / `refunding` | `refunded` 优先，`refunding` 兜底 |
 
 ---
 
@@ -230,7 +257,7 @@ node dipi/scripts/verify-contract.js
 | 项 | 说明 |
 |---|---|
 | 逆地理解析 | 首页定位当前用经纬度做「模拟城市判定」，生产需接入逆地理解析服务后替换 `pages/home/home.js` 的 `guessCity()` |
-| 服务端报价接口 | P8 的价格是**客户端实时算价预览**（`单价 × 人数`），提交后**以服务端返回的 `totalAmount` 为准**；不一致时弹层「价格已更新，请确认」，不静默改价 |
+| 服务端报价接口 | P8 的价格是**客户端实时算价预览**（`unitPriceAmount × travelers + extra − discount`），提交后**以服务端返回的 `totalAmount` 为准**；不一致时弹层「价格已更新，请确认」，不静默改价 |
 | 头像上传 | 当前直接把 `chooseMedia` 的临时路径写进资料；生产需先上传再 `PUT /api/v1/me` |
 | 自定义 TabBar | `components/dipi-tabbar/` 已完整实现（含未读红点），但当前 `app.json` 用的是**原生 tabBar**（UX 规范 §A.1 要求用 `wx.setTabBarBadge` 同步角标）。如需切换：把 `app.json` 的 `tabBar.custom` 设为 `true`，并把该组件挂到 `custom-tab-bar/index` |
 | 订阅消息授权 | `wx.requestSubscribeMessage` 的 `tmplIds` 目前传空数组（模板 ID 未定）；生产需填入实际模板 ID |

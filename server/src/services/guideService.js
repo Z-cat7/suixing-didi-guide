@@ -278,8 +278,10 @@ function getGuideDetail(guideId, userId) {
     ? Math.round((reviews.reduce((s, r) => s + r.rating, 0) / reviews.length) * 10) / 10
     : g.rating;
 
-  // 可约时段：取服务项时段并集，标记已被预约的为不可用
-  const booked = new Set(serviceItems.flatMap((s) => s.bookedSlots || []));
+  // 可约时段：取该地陪全部服务项的时段并集
+  // 可用性按「地陪级」计算：地陪是真人，同一天同一时段只能陪一个人，
+  // 因此某时段被该地陪的任一服务项占用 → 该地陪所有服务项的该时段都置不可用。
+  const booked = new Set(g.bookedSlots || []);
   const slotMap = new Map();
   for (const s of serviceItems) {
     for (const slot of s.slots || []) {

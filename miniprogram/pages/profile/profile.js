@@ -209,10 +209,13 @@ Page({
    */
   onOrderStatTap: function (e) {
     const code = e.currentTarget.dataset.code;
+    // 展示分桶 → 订单页 Tab（仅导航映射，与订单状态机无关）
     const tabMap = {
       pendingPayment: ORDER_TAB.PENDING_PAYMENT,
       ongoing: ORDER_TAB.ONGOING,
       pendingConfirm: ORDER_TAB.PENDING_CONFIRM,
+      refunded: ORDER_TAB.REFUNDING,
+      // 兼容服务端若下发 refunding 键名
       refunding: ORDER_TAB.REFUNDING,
     };
     storage.setNavOrder({ tab: tabMap[code] || ORDER_TAB.ALL });

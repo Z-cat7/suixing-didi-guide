@@ -69,7 +69,7 @@
         >
           <view class="order-card__head">
             <text class="dipi-order-card__no">订单号 {{item.orderNo}}</text>
-            <order-status-badge status="{{item.status}}" status-text="{{item.statusText}}" />
+            <order-status-badge status-badge="{{item.statusBadge}}" status-text="{{item.statusText}}" />
           </view>
 
           <view class="dipi-order-card__body">
@@ -90,7 +90,7 @@
             <!-- 卡内按钮一律次级/幽灵，不出现实心主按钮 -->
             <view class="order-card__actions">
               <view
-                wx:if="{{item.canUserPay}}"
+                wx:if="{{item.actions.pay}}"
                 class="dipi-btn dipi-btn--sm dipi-btn--secondary"
                 hover-class="is-pressed"
                 data-order-id="{{item.orderId}}"
@@ -101,7 +101,7 @@
                 去支付
               </view>
               <view
-                wx:if="{{item.canUserConfirm}}"
+                wx:if="{{item.actions.confirm}}"
                 class="dipi-btn dipi-btn--sm dipi-btn--secondary"
                 hover-class="is-pressed"
                 data-order-id="{{item.orderId}}"
@@ -112,7 +112,7 @@
                 确认完成
               </view>
               <view
-                wx:if="{{item.canUserContact}}"
+                wx:if="{{item.actions.contact}}"
                 class="dipi-btn dipi-btn--sm dipi-btn--ghost"
                 hover-class="is-pressed"
                 data-order-id="{{item.orderId}}"
@@ -123,7 +123,7 @@
                 联系地陪
               </view>
               <view
-                wx:if="{{item.canUserCancel}}"
+                wx:if="{{item.actions.cancel}}"
                 class="dipi-btn dipi-btn--sm dipi-btn--danger-ghost"
                 hover-class="is-pressed"
                 data-order-id="{{item.orderId}}"
@@ -134,7 +134,7 @@
                 取消订单
               </view>
               <view
-                wx:if="{{item.canUserRefund}}"
+                wx:if="{{item.actions.refund}}"
                 class="dipi-btn dipi-btn--sm dipi-btn--danger-ghost"
                 hover-class="is-pressed"
                 data-order-id="{{item.orderId}}"
@@ -145,7 +145,7 @@
                 申请退款
               </view>
               <view
-                wx:if="{{item.canUserReview}}"
+                wx:if="{{item.actions.review}}"
                 class="dipi-btn dipi-btn--sm dipi-btn--secondary"
                 hover-class="is-pressed"
                 data-order-id="{{item.orderId}}"
@@ -208,7 +208,7 @@
         <view class="dipi-card order-detail__card">
           <view class="order-detail__head">
             <text class="dipi-order-card__no">订单号 {{detail.orderNo}}</text>
-            <order-status-badge status="{{detail.status}}" status-text="{{detail.statusText}}" />
+            <order-status-badge status-badge="{{detail.statusBadge}}" status-text="{{detail.statusText}}" />
           </view>
           <text class="order-detail__service">{{detail.serviceName}}</text>
           <text class="order-detail__guide">{{detail.guideName}} · {{detail.guideTitle}}</text>
@@ -247,7 +247,7 @@
           <view class="order-detail__rows">
             <view class="order-detail__row">
               <text class="order-detail__row-label">服务金额</text>
-              <text class="order-detail__row-value">¥{{detail.priceYuan}}</text>
+              <text class="order-detail__row-value">¥{{detail.subtotalYuan}}</text>
             </view>
             <view wx:if="{{detail.extraAmount}}" class="order-detail__row">
               <text class="order-detail__row-label">附加项</text>
@@ -287,7 +287,7 @@
       <view wx:if="{{detail && detail.hasPrimaryAction}}" class="sticky-cta">
         <view class="order-detail__cta-row">
           <view
-            wx:if="{{detail.canUserCancel}}"
+            wx:if="{{detail.actions.cancel}}"
             class="dipi-btn dipi-btn--danger-ghost order-detail__cta-secondary"
             hover-class="is-pressed"
             bindtap="onCancel"
@@ -297,7 +297,7 @@
             取消订单
           </view>
           <view
-            wx:if="{{detail.canUserRefund}}"
+            wx:if="{{detail.actions.refund}}"
             class="dipi-btn dipi-btn--danger-ghost order-detail__cta-secondary"
             hover-class="is-pressed"
             bindtap="onRefund"
@@ -307,7 +307,7 @@
             申请退款
           </view>
           <view
-            wx:if="{{detail.canUserContact}}"
+            wx:if="{{detail.actions.contact}}"
             class="dipi-btn dipi-btn--secondary order-detail__cta-secondary"
             hover-class="is-pressed"
             bindtap="onContact"
@@ -317,7 +317,7 @@
             联系地陪
           </view>
           <view
-            wx:if="{{detail.canUserPay}}"
+            wx:if="{{detail.actions.pay}}"
             class="dipi-btn dipi-btn--primary order-detail__cta-primary"
             hover-class="is-pressed"
             bindtap="onPay"
@@ -327,7 +327,7 @@
             立即支付
           </view>
           <view
-            wx:if="{{detail.canUserConfirm}}"
+            wx:if="{{detail.actions.confirm}}"
             class="dipi-btn dipi-btn--primary order-detail__cta-primary"
             hover-class="is-pressed"
             bindtap="onConfirm"
@@ -337,7 +337,7 @@
             确认完成
           </view>
           <view
-            wx:if="{{detail.canUserReview}}"
+            wx:if="{{detail.actions.review}}"
             class="dipi-btn dipi-btn--primary order-detail__cta-primary"
             hover-class="is-pressed"
             bindtap="onReview"

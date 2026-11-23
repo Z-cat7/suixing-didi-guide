@@ -6,7 +6,14 @@
 > **本文档不定义颜色、字阶、间距的数值**——一律引用 `var(--dipi-*)` 令牌名；数值以 WXSS 为唯一真相源。
 > 覆盖页面：**8 个** = 6 个必需页（首页 / 搜索页 / 聊天页 / 订单页 / 消息页 / 用户主页）＋ 2 个转化主路径二级页（**地陪详情页** / **下单确认页**），TabBar 4 项。
 > 修订记录：**v1.1（IA 裁决后）** — IA-01 由「半屏面板」改为**独立二级页**；新增 §B.7 地陪详情页、§B.8 下单确认页。详见 §A.2.1。
-> **v1.2（对齐 03 契约）** — 服务项 ID 统一 `serviceId`；`slotId` 原子核销约定；收藏端点改幂等 toggle；**订单徽章样式改由服务端 `statusBadge`/`statusTone` 下发**（补齐 IA-06 铁律最后一块）；`orderCounts` 改**互斥分桶**；金额字段对齐 `unitPriceAmount`/`subtotalAmount`；`serviceType` 规范枚举钉死为 camelCase；WS 事件表补客户端→服务端方向与发送确认路径。
+> **v1.9（Phase 2 定稿）** — ① **徽章映射定稿** = Phase 1 v1.1 §6.10（已裁决，待确认块已关闭）；② 新增**「§6.10 为视觉层权威、§A.3.3 只是转述、绝不可反向按 §A.3.3 改 CSS」**的单向依赖声明；③ 新增**「客户端白名单分工」**块（8 项可能下发集合 / 6 项实际下发 / 9 项 CSS 实际类 / **双向校验、不断言固定数量**）；④ §B.4.3 补 `statusBadge` / `statusText` 字段行；⑤ G-88 强化为双向校验口径。
+> **v1.8（对齐已落地的视觉/契约/服务端三层）** — ① **删除 `statusKey`**（服务端已加守卫断言不下发，契约 §8.1 已删）；② **§A.3.3 徽章表对齐已落地状态**（= Phase 1 §6.10 新 6 级体系 + `components.wxss` 9 类 + `statusMap.js`），并保留「2 行待 team-lead 重新确认」的差异对照；③ **白名单改为动态扫 CSS**（9 值），标注 `confirmed`（预留给非订单徽章）/ `dispute`（纠纷）/ `refund`（已废弃别名）的用途；④ 版本标注同步为「已落地」。
+> **v1.7（对齐 `03-api-contract.md` v2.0 实测契约）** — ① **首页补 `banners` 模块**（A.4 由 7 段扩为 **8 段**，Banner 置于搜索框之后，只展示 1 张不自动轮播）+ `hotDestinations`/`guideTotal`/`cityTotal`/`unreadCount`；② **搜索查询参数全部改名对齐契约**：`city`→**`destination`**、`priceMin`→**`minPrice`**、`priceMax`→**`maxPrice`**、`minRating`→**`rating`**、`sortBy`→**`sort`**（默认 `recommend`），`filterOptions.cities`→**`destinations`**、`priceRanges` 元素改为**分+元双份**、新增 `priceRange`；③ **金额单位警示**（查询参数=元 / 响应体=分）；④ `pageSize` **各端点默认值不同，一律以契约为准**（新增对照表）；⑤ 地陪摘要/详情补 `priceMaxAmount`/`priceUnitText`/`serviceTypes`/`serviceTypeName`/`verified`/`identityVerified`/`location`/`languagesText`/`status`/`favoritesCount`；⑥ 手机号改 **6–20 位数字**（原写 11 位）；⑦ 错误码 `40001`→**`42200`**、`40901`→**`40900`**；⑧ 明确**服务端算总价**，前端传的金额一律被忽略。
+> **v1.6（终稿 · 徽章色板定稿）** — ① **徽章类名列采纳最终裁决**（`pendingAccept`→`pending`、`accepted`→`ongoing`、`pendingConfirm`→`review`、`refunding`→`refunding`🆕、`refunded`→`closed`）；② **色板冲突已解决**：仅需**新增 1 个 4 行 CSS 类** `.dipi-badge--refunding`（accent 橙），**不修改任何现有类的颜色 → 零回归风险**；若米拉不新增则退化为 `refunding`→`review`（橙）的零 CSS 方案；③ **`statusKey` 恢复为必发**（与 `status` **恒等**，契约已明写「读任一即可」，客户端**全局只读其一**，不混用）；④ 白名单扩为 **8 值**，并标注 `refund` 与 `refunding` 是两个不同的类（红 vs 橙，拼错即错色）。
+> **v1.5（对齐 03 契约实测 + rex-server 复核 + 团队裁决）** — ① **撤销 `statusKey`**：与 `status` 完全等价，属重复同义键，重新制造「双状态名」问题 → 客户端读 `status`，服务端**无需新增字段**（§A.3.3 补「订单状态 4 个维度」表）；② **`orderStats` 第 4 桶键名 = `refunded`**（采纳裁决），用户可见标签「退款」；字段名由 `orderCounts` 对齐服务端实际的 **`orderStats`**；③ **时段核销改为「地陪 + slotId」全局唯一**（地陪是真人，同一时段只能陪一个人）→ `availableSlots[]` 改为**地陪级**、切换服务项**不改变时段集合**、取消订单释放时段、`409` + `reason=slot_taken`；④ **服务端按 `(conversationId, clientMessageId)` 幂等**（HTTP/WS 共用 service 函数），客户端跨通道去重降级为防御性；⑤ 徽章归并方案两版并存 → 上表（Phase 1 / 服务端现状）为准，另一版列为待裁决并附 4 条理由。
+> **v1.4（对齐 03 契约实测 + rex-server 三问答）** — ① `statusTone` 值域 `neutral` → **`ink`**（与 Phase 1 token 命名一致）；② 4 格第 4 桶键名统一为 **`refunding`**（该桶含「退款中 + 已退款」，`refunded` 语义不准），用户可见标签「已退款」→「**退款**」；③ **跨通道去重键从 `messageId` 改为 `clientMessageId`**（HTTP 与 WS 是服务端两条独立路径，同一逻辑消息 `messageId` 会不同）＋ 明确 `clientMessageId` 生命周期；④ 状态机新增 **T24 `inService --用户确认完成--> completed`** 兜底迁移（对齐服务端 `allowedActions` 在 `inService` 下发 `confirm`）；⑤ 订单金额确认**无 `priceAmount`**；⑥ `allowedActions` 值域确认 `pay/cancel/confirm/refund/contact/review`。
+> **v1.3（对齐 03 契约与团队裁决）** — ①「我的」页 4 格改**互斥分桶**（已裁决，硬约束写进契约）；② `statusBadge` 拆为**样式决策**（Phase 1 现有 7 个 CSS 类后缀）+ 新增 **`statusKey`**（语义身份，1:1）；③ 订单金额**删除**无前缀 `priceAmount`；④ `allowedActions[]` 定为权威、6 个布尔位降为派生；⑤ WS 三条铁律（HTTP 为权威 / 信封三字段 / WS 仅兜底）＋保留 `utils/ws.js` 防御性归一；⑥ `serviceType` 规范枚举钉死 camelCase；⑦ `orderCounts` 硬约束写进契约。
+> **v1.2（对齐 03 契约）** — 服务项 ID 统一 `serviceId`；`slotId` 原子核销约定；收藏端点改幂等 toggle；订单徽章样式改由服务端下发（补齐 IA-06 铁律最后一块）；金额字段对齐 `unitPriceAmount`/`subtotalAmount`；`serviceType` 规范枚举钉死为 camelCase；WS 事件表补客户端→服务端方向与发送确认路径。
 
 ---
 
@@ -17,10 +24,11 @@
 3. **字段命名统一 camelCase**，全链路（URL query / storage key / 接口 body / WS 消息）一致；禁止 snake_case。
 4. **金额一律整数分**，字段名后缀 `Amount`（`priceAmount` / `totalAmount` / `refundAmount`）；单位独立字段 `priceUnit`。
 5. **时间一律 ISO 8601 带时区**（`2026-11-23T15:04:05+08:00`），不用时间戳数字。
+5b. ⚠️ **金额单位分两处，务必分清**：**查询参数** `minPrice` / `maxPrice` 单位是 **元**（符合人类输入）；**响应体** `xxxAmount` 单位是 **分**。筛选值取自 `filter-options.priceRange` / `priceRanges`（那两处**同时**给 `min`/`max`（元）与 `minAmount`/`maxAmount`（分）），**提交时不要再乘 100**。
 6. **分页统一格式**：`{ list, page, pageSize, total, hasMore }`，`page` 从 1 起；数组键名 = 资源名复数 camelCase。
 7. **响应体统一信封**：`{ code, message, data }`，`code === 0` 为成功；`code !== 0` 时 `message` 直接可展示给用户。
-8. **【全局铁律】订单的状态、操作与样式一律由服务端下发**（`status` / `statusText` / `statusBadge` / `statusTone` / `allowedActions[]` + 6 个 `canUserXxx` 布尔位），前端**只渲染、不自算**，**严禁**硬编码「状态 → 按钮 / 状态 → 徽章样式」映射表。这条从根上消除前后端状态漂移。
-9. 订单状态共 **10 个**（含 `closed` 与 `cancelled` 两个不同语义），迁移见 §D.3；非法迁移服务端拒绝，前端必须容错。
+8. **【全局铁律】订单的状态、操作与样式一律由服务端下发**（`status` / `statusText` / `statusBadge` / `statusTone` / `allowedActions[]` + 6 个 `canUserXxx` 布尔位），前端**只渲染、不自算**，**严禁**硬编码「状态 → 按钮 / 状态 → 徽章样式」映射表。这条从根上消除前后端状态漂移。**不提供 `statusKey` / `statusCode` 等同义键** —— 语义身份就是 `status`。
+9. 订单状态共 **10 个**（含 `closed` 与 `cancelled` 两个不同语义），合法迁移 **24 条**，见 §D.3；非法迁移服务端拒绝，前端必须容错。
 10. **路由共 8 页**：TabBar 4 项 + 二级页 4 个（搜索 / 聊天 / **地陪详情** / **下单确认**）。地陪详情与下单确认**是独立 push 页，不是弹层**。
 11. 一屏 ≤ 1 主色实心按钮、≤ 1 陶土红实心块——列表项里的按钮**一律次级**。
 12. 所有可点击元素渲染盒子 ≥ `88rpx × 88rpx`；所有可读文字 ≥ `24rpx`。
@@ -107,7 +115,7 @@
 | **IA-03** | 消息页采用 **双 Tab**（会话 / 通知），Tab 状态存 `storage`，**不**写入 TabBar | 系统通知与会话是两种内容模型，塞进一个列表会让人无法区分「地陪消息」与「平台通知」 | 保持现状 |
 | **IA-04** | 首页不设任何实心主按钮；实心主按钮只出现在**地陪详情页 P7** 与**下单确认页 P8**（各自页面内 1 个） | 视觉规范原则 1；首页有 N 张地陪卡，每张配按钮必然违规。卡片整体可点已足够 | 保持现状 |
 | **IA-05** | 搜索结果与首页推荐**共用同一 `guide` 摘要结构与同一张卡片组件**；详情页与下单页**不复用**摘要结构，各自用完整结构 | 避免两套卡片在字段缺失/下架态上表现不一致（最容易漏的边界）；详情/下单是独立页，可用完整字段 | 保持现状 |
-| **IA-06** | **订单可用操作一律由服务端下发**（`canUserPay` / `canUserCancel` / `canUserConfirm` / `canUserRefund` / `canUserContact` / `canUserReview` + `statusText`），前端**只渲染不计算** | 从根上消除前后端状态漂移：状态机有 10 态、23 条迁移，前端硬编码映射必然漏边 | **全局铁律**，见 §0 第 8 条 |
+| **IA-06** | **订单可用操作一律由服务端下发**（`canUserPay` / `canUserCancel` / `canUserConfirm` / `canUserRefund` / `canUserContact` / `canUserReview` + `statusText`），前端**只渲染不计算** | 从根上消除前后端状态漂移：状态机有 10 态、24 条迁移，前端硬编码映射必然漏边 | **全局铁律**，见 §0 第 8 条 |
 
 ## A.3 页面层级与统一命名表（用户可见文案）
 
@@ -152,34 +160,88 @@
 > **🔴 徽章样式由服务端下发，前端不做状态→样式的运行时映射（IA-06 铁律的延伸）**
 > 服务端在订单对象中下发 **`statusBadge`**（徽章类名后缀）与 **`statusTone`**（语义色调），前端**直接套用**：
 > ```
-> class="dipi-badge--{{ order.statusBadge }}"
+> <text class="dipi-badge dipi-badge--{{ order.statusBadge }}">{{ order.statusText }}</text>
 > ```
-> - **`statusBadge`** = 下表「`statusBadge`」列的值，**必须是 Phase 1 `components.wxss` 中已存在的类名后缀**（白名单见下）。前端**不维护任何映射表**，CSS **零改动**。
-> - **`statusKey`** = 语义状态键（下表「`statusKey`」列），供客户端做**逻辑判断 / 埋点 / 读屏补充**时使用；**不用于样式**。
-> - **`statusTone`** = 语义色调（`warning` / `info` / `brand` / `accent` / `success` / `neutral` / `error`），作为**第二重信息**：色弱 / 单色 / 高对比模式下，读屏与图标可依据 `statusTone` + `statusText` 表达，**不依赖颜色**。
-> - **下表是「服务端的生成依据」**（服务端据此产出 `statusBadge` / `statusKey`），**不是前端的运行时映射表**。
+> - **`statusBadge`** = 下表「`statusBadge`」列的值，**必须在下表白名单内**。前端**不维护任何映射表**。
+> - **下表是「服务端的生成依据」**（服务端据此产出 `statusBadge` / `statusTone`），**不是前端的运行时映射表**。
 > - 前端**禁止**写 `status === 'pendingPayment' ? 'dipi-badge--pending' : ...` 这类判断（检查项 G-83）。
 > - **白名单兜底（必做）**：前端拼出的类名必须在白名单内；服务端下发未知值 → 降级 `.dipi-badge--closed`（中性灰）+ 显示 `statusText`，**不得渲染出不存在的类**（否则徽章丢失底色变成默认样式，视觉全错）。
 
-**`statusBadge` 白名单（= Phase 1 `components.wxss` 现有 7 个状态类，CSS 零改动）**：
-`pending` · `confirmed` · `ongoing` · `review` · `done` · `closed` · `refund`
+**`statusBadge` 白名单（9 值 = `components.wxss` 当前实际存在的全部状态徽章类）**：
+`pending` · `confirmed` · `ongoing` · `review` · `refunding` · `done` · `closed` · `dispute` · `refund`
 
-| `status` | `statusKey` | 徽章文案 | `statusBadge`（样式类后缀） | 底/字 token | 用户可执行操作 | 详见 §D.3 |
+> ✅ **客户端白名单请动态扫 `components.wxss` 取全部 `.dipi-badge--*`**（排除修饰类 `sm` / `solid`），**不要硬编码** —— 视觉层新增类时硬编码白名单会让静态检查假红。
+> **服务端实际下发其中 6 个**：`pending` `ongoing` `review` `refunding` `done` `closed`（10 个状态映射到 6 个类，多状态共用类靠 `statusText` 区分）。
+> 客户端白名单的**分工与双向校验规则**见下方「📋 客户端白名单的分工」块。
+> **未被订单状态使用的 3 个**（**视觉层预留，不是漏映射**）：
+> - `confirmed`（info 蓝）—— 已接单/服务中统一走 `ongoing` 品牌绿；保留给**非订单类信息徽章**（系统通知 / 处理中 / 平台介入中）。⚠️ **「已接单」不要用 `confirmed`**。
+> - `dispute`（error 红）—— 专供「纠纷 / 异常」。**当前 10 态中没有对应状态**（纠纷属售后子状态，不占顶层状态位）。
+> - `refund`（error 红）—— ⚠️ **已废弃**，是 `dispute` 的**兼容别名**（视觉完全相同）。**新代码一律用 `dispute`**。
+
+#### 订单状态的 5 个维度（各司其职，**不要混用**）
+
+| 维度 | 字段 | 用途 | 取值 |
+|---|---|---|---|
+| **语义身份** | **`status`** | 逻辑判断 / 埋点 / 读屏补充 | `pendingPayment` `pendingAccept` `accepted` `inService` `pendingConfirm` `completed` `cancelled` `closed` `refunding` `refunded`（10 值，与状态枚举 1:1） |
+| **中文文案** | `statusText` | 徽章文字（**必须与色块同时渲染**） | 待支付 / 待接单 / 已接单 / 服务中 / 待确认 / 已完成 / 已取消 / 已关闭 / 退款中 / 已退款 |
+| **样式决策** | `statusBadge` | **CSS 类名后缀** → `class="dipi-badge--{{statusBadge}}"` | 8 值白名单（见上） |
+| **功能色语义** | `statusTone` | 色弱 / 单色模式的第二重信息，**必须与徽章底色同色系** | `warning` `info` `brand` `accent` `success` `ink` `error` |
+
+> 🚫 **不提供 `statusKey` / `statusCode` 等同义键**。`status` 就是语义身份本身，**不另开别名** —— 服务端已加机器守卫断言不下发这些键，避免「客户端该信哪个」的歧义。
+> ⚠️ **语义身份不是第二套状态机**：`status` 只回答「现在是哪个状态」；**按钮显隐一律以 `allowedActions[]` 为准**，不得用 `status` 推导按钮（检查项 G-84）。
+
+> **📋 客户端白名单的分工（已与客户端实例对齐）**
+> - **白名单 = 服务端「可能下发」的取值集合（8 项）**：`pending` `ongoing` `review` `refunding` `done` `closed` `dispute` `refund`
+>   —— 含 `dispute`（**预留**：纠纷 / 异常，非订单顶层状态）与 `refund`（**已废弃**，`dispute` 的兼容别名）。
+> - **服务端实际下发其中 6 个**：`pending` `ongoing` `review` `refunding` `done` `closed`。
+> - **CSS 实际存在 9 个状态徽章类**：`pending` `confirmed` `ongoing` `review` `refunding` `done` `closed` `dispute` `refund`
+>   —— `confirmed`（info 蓝）为**非订单类信息徽章**预留（系统通知 / 处理中 / 平台介入中），⚠️ **「已接单」不要用 `confirmed`**，用 `ongoing`。
+> - **静态检查按「双向校验」执行，🚫 不断言固定数量**：
+>   ① **CSS ⊆ 白名单** —— CSS 里每个状态类都要有对应的白名单项（防「前端有样式但契约没认」）；
+>   ② **服务端下发 ⊆ CSS** —— 服务端实际下发的每个 badge 值都必须能在 `components.wxss` 找到对应类（防「下发了前端没样式」→ 徽章掉底色）。
+>   → **视觉层新增预留类不会误报**，因此白名单可随视觉层演进。
+> - **兜底**：服务端下发白名单外的未知值 → 前端降级 `.dipi-badge--closed`（中性灰）+ 显示 `statusText`，**不得渲染出不存在的类**。
+
+#### 状态 → 徽章映射表（**服务端生成依据，客户端不维护映射**）
+
+**这是一套 6 级「视觉紧迫度」体系**：
+
+| 紧迫度 | 覆盖状态 | 徽章底色 | 用户读到的含义 |
+|---|---|---|---|
+| ① 还没确认，有时限 | 待支付 / 待接单 | 琥珀 `warning` | 「这事还没定，而且有时限」（15min / 2h） |
+| ② 已确认，等开始 | 已接单 | 品牌绿 `brand` | 「在推进中」 |
+| ③ 正在进行 | 服务中 | 品牌绿 `brand` | 同上 |
+| ④ **等你行动 / 关注** | 待确认 / 退款中 | **橙 `accent`** | 「需要你点一下」—— 暖色＝有行动召唤 |
+| ⑤ 顺利完成 | 已完成 | 绿 `success` | 「妥了」 |
+| ⑥ 已结束 | 已取消 / 已关闭 / 已退款 | 灰 `ink` | 「结束了」（**中性，不制造焦虑**） |
+
+| `status` | 徽章文案 | `statusBadge`（样式类后缀） | 底/字 token | `statusTone` | 用户可执行操作 | 详见 §D.3 |
 |---|---|---|---|---|---|---|
-| `pendingPayment` | `pending` | 待支付 | `pending`（`.dipi-badge--pending`） | `--dipi-warning-100` / `--dipi-warning-700` | 去支付、取消订单 | D.3 |
-| `pendingAccept` | `pendingAccept` | 待接单 | `confirmed`（`.dipi-badge--confirmed`） | `--dipi-info-100` / `--dipi-info-700` | 取消订单、联系地陪 | D.3 |
-| `accepted` | `accepted` | 已接单 | `confirmed`（`.dipi-badge--confirmed`） | `--dipi-info-100` / `--dipi-info-700` | 联系地陪、取消订单 | D.3 |
-| `inService` | `inService` | 服务中 | `ongoing`（`.dipi-badge--ongoing`） | `--dipi-brand-100` / `--dipi-brand-700` | 联系地陪、申请退款 | D.3 |
-| `pendingConfirm` | `pendingConfirm` | 待确认 | `review`（`.dipi-badge--review`） | `--dipi-accent-100` / `--dipi-accent-700` | 确认完成、申请退款 | D.3 |
-| `completed` | `completed` | 已完成 | `done`（`.dipi-badge--done`） | `--dipi-success-100` / `--dipi-success-700` | 再次预约、评价 | D.3 |
-| `cancelled` | `cancelled` | 已取消 | `closed`（`.dipi-badge--closed`） | `--dipi-ink-100` / `--dipi-ink-500` | 再次预约、再次咨询 | D.3 |
-| `closed` | `closed` | 已关闭 | `closed`（`.dipi-badge--closed`） | `--dipi-ink-100` / `--dipi-ink-500` | 再次预约、再次咨询 | D.3 |
-| `refunding` | `refunding` | 退款中 | `refund`（`.dipi-badge--refund`） | `--dipi-error-100` / `--dipi-error-700` | 查看进度、联系客服 | D.3 |
-| `refunded` | `refunded` | 已退款 | `closed`（`.dipi-badge--closed`） | `--dipi-ink-100` / `--dipi-ink-500` | 再次预约 | D.3 |
+| `pendingPayment` | 待支付 | `pending`（`.dipi-badge--pending`） | `--dipi-warning-100` / `--dipi-warning-700` | `warning` | 去支付、取消订单 | D.3 |
+| `pendingAccept` | 待接单 | `pending`（`.dipi-badge--pending`） | `--dipi-warning-100` / `--dipi-warning-700` | `warning` | 取消订单、联系地陪 | D.3 |
+| `accepted` | 已接单 | `ongoing`（`.dipi-badge--ongoing`） | `--dipi-brand-100` / `--dipi-brand-700` | `brand` | 联系地陪、取消订单 | D.3 |
+| `inService` | 服务中 | `ongoing`（`.dipi-badge--ongoing`） | `--dipi-brand-100` / `--dipi-brand-700` | `brand` | 确认完成（兜底）、联系地陪、申请退款 | D.3 |
+| `pendingConfirm` | 待确认 | `review`（`.dipi-badge--review`） | `--dipi-accent-100` / `--dipi-accent-700` | `accent` | 确认完成、申请退款 | D.3 |
+| `completed` | 已完成 | `done`（`.dipi-badge--done`） | `--dipi-success-100` / `--dipi-success-700` | `success` | 再次预约、评价 | D.3 |
+| `cancelled` | 已取消 | `closed`（`.dipi-badge--closed`） | `--dipi-ink-100` / `--dipi-ink-500` | `ink` | 再次预约、再次咨询 | D.3 |
+| `closed` | 已关闭 | `closed`（`.dipi-badge--closed`） | `--dipi-ink-100` / `--dipi-ink-500` | `ink` | 再次预约、再次咨询 | D.3 |
+| `refunding` | 退款中 | **`refunding`**（`.dipi-badge--refunding`） | `--dipi-accent-100` / `--dipi-accent-700` | `accent` | 查看进度、联系客服 | D.3 |
+| `refunded` | 已退款 | `closed`（`.dipi-badge--closed`） | `--dipi-ink-100` / `--dipi-ink-500` | `ink` | 再次预约 | D.3 |
 
-> ⚠️ **`statusBadge` 与 `statusKey` 是两回事**：`statusKey` 是**语义身份**（与订单状态同名/近似，1:1），`statusBadge` 是**视觉决策**（多个状态可共用一个类，如 `pendingAccept` 与 `accepted` 共用 `confirmed`、`cancelled`/`closed`/`refunded` 共用 `closed`）。
-> ⚠️ **服务端不得下发 `status` 的原值当 `statusBadge`**：`dipi-badge--pendingAccept` / `--inService` / `--completed` / `--refunding` / `--refunded` / `--accepted` / `--cancelled` **在 Phase 1 CSS 中都不存在**，直接拼会渲染成无底色的默认徽章。
+> ⚠️ **服务端不得下发 `status` 的原值当 `statusBadge`**：`dipi-badge--pendingPayment` / `--pendingAccept` / `--accepted` / `--inService` / `--pendingConfirm` / `--completed` / `--cancelled` / `--closed` / `--refunding` **在 CSS 中都不存在**（注意 `refunding` 与 `refund` 是两个不同的类），直接拼会渲染成无底色的默认徽章。
+> ⚠️ **「已退款」用中性灰而非红色**：`refunded` 是**已完成的好结果**，用 error 红会让用户误以为出了问题；橙（accent）留给**进行中**的 `refunding` —— 那是真正需要你关注、但不是「出错」的状态。
+> ⚠️ **`refund`（error 红）保留给「纠纷 / 异常」**：Phase 1 中 `退款中` 与 `纠纷` 共用 error 红；本表把 `退款中` 挪到橙后，**红色只留给真正的异常**，色板纪律更清晰。
 > ⚠️ **徽章纪律**：徽章紧贴订单标题**左上角**；右侧留给价格与操作按钮。徽章**必须**带文字（色弱可达性，见 §E.3 A-07、A-21）。`pendingPayment` 在订单页**顶部强调条**用 `.dipi-badge--solid`（`--dipi-warning-600` 实心），列表卡片内不得用实心徽章。
+
+> ✅ **【已裁决 · 定稿】本表 = Phase 1 v1.1 §6.10 = `components.wxss` = 服务端 `statusMap.js`，四方完全一致（已 token 级脚本校验，10 行 0 不一致）**
+>
+> 裁决要点：
+> 1. **`pendingConfirm` → `review`（accent 橙）**：「待确认」= 服务已结束、**等用户点确认**，是最需要用户行动的状态 → 暖色＝行动召唤；且「已完成」是 `done`（success 绿），两者色相与语义都不同，不会混淆。
+> 2. **`refunding` → `refunding`（accent 橙）**：「退款中」需要关注但**不是出错** → 橙；**error 红专供「纠纷 / 异常」**（`dispute`）。
+> 3. **`refunded` → `closed`（ink 中性灰）**：「已退款」是**已完成的好结果**，用红会让用户误以为出了问题；ink 类的语义统一为「这件事已经了结，无需用户处理」（与「已取消 / 已关闭」同族）。
+>
+> ⚠️ **若本表与 `01-visual-design.md` §6.10 出现任何不一致 —— 一律以 §6.10 为准，并回头修正本表。**
+> **§6.10（视觉层原始定义，米拉维护）是权威；§A.3.3（体验层转述）只是它的镜像。** 转述出错时以原始定义为准，**绝不可反过来按 §A.3.3 去改 CSS 或 Phase 1** —— 这条单向依赖是本轮协作踩过的坑，写在这里防止复发。
 
 ### A.3.4 空态 / 错误 / 离线文案表（全局统一，各页引用）
 
@@ -199,23 +261,25 @@
 
 ## A.4 内容分组策略（首页模块顺序 + 理由）
 
-首页模块自上而下固定为 **7 段**，顺序即用户决策顺序（先「在哪」→ 再「做什么」→ 再「找谁」→ 最后「敢不敢下单」）：
+首页模块自上而下固定为 **8 段**，顺序即用户决策顺序（先「在哪」→ 再「找什么」→ 再「找谁」→ 最后「敢不敢下单」）：
 
 | 序 | 模块 | 内容 | 为什么在这个位置 |
 |---|---|---|---|
 | 1 | **定位条** | 当前城市 / 定位中 / 手动选择城市 | 用户的第一约束是「在哪」。异地用户打开 App 时最怕定位错城市，城市错 = 后面全错 |
 | 2 | **搜索框** | 搜目的地、服务类型、地陪昵称 | 主动意图入口。放在视觉第一屏可达位置 |
-| 3 | **服务类型金刚区** | 美食陪逛 / 城市漫游 / 景点讲解 / 拍照跟拍 / 亲子陪玩 / 代排队办事 | 品类认知教育。**不认知产品的人不知道怎么搜**。横排 6 个，横向可滚动 |
-| 4 | **推荐地陪（横滑）** | 4–6 张地陪卡 | 转化核心区。横滑而非瀑布流，因为**转化对象是人不是图文**（视觉规范 §1.3）。横滑让「浏览多家」成本极低。卡片点击 → **地陪详情页 P7 入口**（独立 push 页） |
-| 5 | **场景入口（横滑）** | 今天就能约 / 周末可用 / 亲子优选 / 机场接送 | 把「模糊需求」翻译成「可下单的确定需求」，接住第 4 段没转化的人 |
-| 6 | **进行中订单提醒**（条件显示） | 有 `pendingPayment` / `inService` 订单时出现 | 履约中用户的第一诉求是「我的订单怎么样了」。**不占用首屏固定位**（条件渲染），避免所有人被无关信息打扰 |
-| 7 | **服务保障说明** | 实名认证 / 平台保障 / 售后无忧 | 信任兜底放最后。信任是**决策后**才需要的确认，前置会拖慢浏览 |
+| 3 | **Banner 引导位** | 单张主视觉 + 标题 + 副标题（契约 `banners`） | 契约里的 banner 是**新手/目的地引导**（`linkType=destination`），不是折扣营销位 —— 与「随行」的克制调性一致。放在搜索框之后：**主动搜索意图 → 被动推荐（带图，最吸引）→ 品类认知 → 具体的人**。**只展示 1 张、不自动轮播**（禁自动动画） |
+| 4 | **服务类型金刚区** | 美食陪逛 / 城市漫游 / 景点讲解 / 拍照跟拍 / 亲子陪玩 / 代排队办事 | 品类认知教育。**不认知产品的人不知道怎么搜**。横排 6 个，横向可滚动 |
+| 5 | **推荐地陪（横滑）** | 4–6 张地陪卡（契约 `recommendGuides` / `topRatedGuides`） | 转化核心区。横滑而非瀑布流，因为**转化对象是人不是图文**（视觉规范 §1.3）。横滑让「浏览多家」成本极低。卡片点击 → **地陪详情页 P7 入口**（独立 push 页） |
+| 6 | **场景入口（横滑）** | 今天就能约 / 周末可用 / 亲子优选 / 机场接送 | 把「模糊需求」翻译成「可下单的确定需求」，接住第 5 段没转化的人 |
+| 7 | **进行中订单提醒**（条件显示） | 有 `pendingPayment` / `inService` 订单时出现 | 履约中用户的第一诉求是「我的订单怎么样了」。**不占用首屏固定位**（条件渲染），避免所有人被无关信息打扰 |
+| 8 | **服务保障说明** | 实名认证 / 平台保障 / 售后无忧 | 信任兜底放最后。信任是**决策后**才需要的确认，前置会拖慢浏览 |
 
 **分组硬规则**：
 - 区块标题统一用 `.section__title`（`--dipi-fs-title`），右上角「更多」用 `.section__more`。
 - 区块间距 `--dipi-space-6`，卡片间距 `--dipi-space-5`。
-- **模块 6 的出现会让页面变长，但不得把模块 4 挤出首屏**：模块 4 必须在无滚动时可见 ≥ 2 张完整卡片。
-- **模块 4 的「详情页入口」是独立的 push 页**（`/pages/guide/detail`，P7），**不是半屏面板**：卡片整体可点 → `navigateTo` → 详情页底部「立即预约」→ 再 `navigateTo` 下单确认页（`/pages/order/create`，P8）。返回时逐级回退，不得 `reLaunch`。
+- **模块 7 的出现会让页面变长，但不得把模块 5 挤出首屏**：模块 5 必须在无滚动时可见 ≥ 2 张完整卡片。
+- **模块 3（Banner）只展示 1 张、不自动轮播**；它是首页**唯一**允许的运营位，点击按 `linkType` 路由（`destination` → 搜索页带 `destination=`）。**Banner 无内容时整段隐藏**（不留空白框）。
+- **模块 5 的「详情页入口」是独立的 push 页**（`/pages/guide/detail`，P7），**不是半屏面板**：卡片整体可点 → `navigateTo` → 详情页底部「立即预约」→ 再 `navigateTo` 下单确认页（`/pages/order/create`，P8）。返回时逐级回退，不得 `reLaunch`。
 - 首页 7 段**顺序不因新增二级页而改变**——详情页与下单页是「第 4 段之后」的延伸，不插入首页结构。
 
 ---
@@ -233,6 +297,7 @@
 ### B.1.1 核心功能（用户视角）
 
 1. **选城市**：查看/切换当前服务城市（定位或手动选择），切换后整个首页内容刷新。
+1b. **看引导位**：首页顶部 Banner（单张），点按按 `linkType` 跳转到对应目的地/服务类型/地陪。
 2. **发起搜索**：点搜索框或服务类型入口进入搜索页，条件自动带入。
 3. **浏览推荐地陪**：横向滑动查看推荐地陪（含评分、服务标签、价格、是否休息中），点卡片进入**地陪详情页 P7**（独立 push 页）。
 4. **下单预约**：在详情页选服务项 → 进入**下单确认页 P8** 选时间、填人数与备注 → 提交订单并调起支付。
@@ -250,7 +315,7 @@
      - 一致 → 定位条显示「{city} · 定位中」→「{city}」，不刷新内容（避免无谓跳动）。
      - 不一致 → 定位条更新为「{当前定位城市}」，**顶部出现一次轻提示条**「已切换到你当前所在的城市」+「撤销」按钮；内容**不自动刷新**（防止用户正在看时被换掉），仅当用户点「切换」才重新拉数据。
    - **失败/拒绝** → 定位条显示「{city} ›」，右侧显示定位图标，点击弹底部选择城市面板；**不弹任何模态阻断**（定位拒绝绝不能挡住浏览）。
-4. 首页数据返回 → 填充模块 3/4/5/7；模块 6 按订单摘要决定是否渲染。
+4. 首页数据返回 → 填充模块 3/4/5/6/8；模块 7 按订单摘要决定是否渲染。**模块 3（Banner）无数据时整段隐藏**（不留空框）。
 
 #### 流程 2：点搜索框 → 进入搜索页
 
@@ -300,15 +365,28 @@
 | 字段名 | 类型 | 必填 | 说明 | 示例值 | 来源 |
 |---|---|---|---|---|---|
 | `currentCity` | string | 是 | 当前服务城市名 | `"成都"` | `GET /api/v1/home` → `data.currentCity` |
+| `city` | string | 否 | 指定城市（**首页用 `city`，搜索页用 `destination`，勿混**） | `"成都"` | `GET /api/v1/home?city=` |
 | `locating` | boolean | 是 | 是否正在定位（UI 态，非服务端字段） | `true` | 客户端本地 |
 | `cityOptions` | object[] | 否 | 可选城市列表 | `[{code, name, guideCount}]` | `GET /api/v1/cities` → `data.list` |
 | `searchPlaceholder` | string | 是 | 搜索框占位文案 | `"输入目的地或服务"` | `GET /api/v1/home` → `data.searchPlaceholder` |
 | `serviceTypes` | object[] | 是 | 金刚区服务类型 | `[{code,name,iconName,guideCount}]` | `GET /api/v1/home` → `data.serviceTypes` |
-| `featuredGuides` | object[] | 是 | 推荐地陪（摘要结构，同 B.2） | 见下 | `GET /api/v1/home` → `data.featuredGuides` |
+| `banners` | object[] | 否 | 首页引导位（**只展示 1 张**）；为空则整段隐藏 | `[{bannerId,title,subtitle,imageUrl,linkType,linkValue}]` | `GET /api/v1/home` → `data.banners` |
+| `banners[].bannerId` | string | 是 | Banner ID | `"bn_01"` | 同上 |
+| `banners[].title` | string | 是 | 主标题 | `"第一次来，也能被本地人带着走"` | 同上 |
+| `banners[].subtitle` | string | 否 | 副标题 | `"12 位在地地陪 · 4 座城市"` | 同上 |
+| `banners[].imageUrl` | string | 是 | 主视觉图 | `"https://…/banner-01/750/320"` | 同上 |
+| `banners[].linkType` | enum | 是 | 跳转类型（`destination`/`serviceType`/`guide`） | `"destination"` | 同上 |
+| `banners[].linkValue` | string | 是 | 跳转参数值（与 `linkType` 配对） | `"成都"` | 同上 |
+| `hotDestinations` | object[] | 否 | 热门目的地 | `[{code,name,guideCount,cover}]` | 同上 |
+| `recommendGuides` | object[] | 是 | 推荐地陪（摘要结构，同 B.2） | 见下 | 同上 → `data.recommendGuides` |
+| `topRatedGuides` | object[] | 否 | 高分地陪（摘要结构，同 B.2） | 见下 | 同上 → `data.topRatedGuides` |
+| `guideTotal` | int | 否 | 全站地陪数（用于 banner 副标题等） | `14` | 同上 |
+| `cityTotal` | int | 否 | 全站城市数 | `6` | 同上 |
+| `unreadCount` | int | 否 | 未读总数（首页可据此预置 TabBar 角标） | `3` | 同上 |
 | `scenes` | object[] | 否 | 场景入口 | `[{code,name,iconName,subtitle,query}]` | `GET /api/v1/home` → `data.scenes` |
-| `activeOrderSummary` | object\|null | 否 | 进行中订单提醒（无则不渲染模块 6） | `{orderId, orderNo, status, guideName, serviceName, scheduledAt}` | `GET /api/v1/home` → `data.activeOrderSummary` |
+| `activeOrderSummary` | object\|null | 否 | 进行中订单提醒（无则不渲染模块 7） | `{orderId, orderNo, status, guideName, serviceName, scheduledAt}` | `GET /api/v1/home` → `data.activeOrderSummary` |
 | `guarantees` | object[] | 是 | 保障说明 | `[{code,title,description,iconName}]` | `GET /api/v1/home` → `data.guarantees` |
-| `guideId` | string | 是 | 地陪 ID | `"g_2051"` | `GET /api/v1/home` → `data.featuredGuides[].guideId` |
+| `guideId` | string | 是 | 地陪 ID | `"g_2051"` | `GET /api/v1/home` → `data.recommendGuides[].guideId` |
 | `name` | string | 是 | 地陪姓名（≤8 字显示） | `"阿May"` | 同上 |
 | `title` | string | 是 | 头衔/一句话介绍 | `"成都本地美食向导"` | 同上 |
 | `avatarUrl` | string | 是 | 头像 | `"https://cdn.dipi.cn/g/2051.jpg"` | 同上 |
@@ -320,6 +398,16 @@
 | `priceAmount` | int | 是 | 价格（分）；缺失 → 「价格面议」 | `12000` | 同上 |
 | `priceOriginAmount` | int\|null | 否 | 划线原价（分） | `15000` | 同上 |
 | `priceUnit` | enum | 是 | `hour`/`session`/`day`/`person` | `"hour"` | 同上 |
+| `priceUnitText` | string | 否 | 单位展示文案（**直接展示，不自行拼装**） | `"小时"` | 同上 |
+| `priceMaxAmount` | int\|null | 否 | 最高价（分）；与 `priceAmount` 一起构成价格区间展示 | `32800` | 同上 |
+| `serviceTypes` | string[] | 否 | 服务类型 code 数组（规范枚举，见 §B.2.3） | `["foodTour","cityWalk"]` | 同上 |
+| `serviceTypeName` | string | 否 | 服务类型中文名（多类型时取主） | `"美食陪逛"` | 同上 |
+| `verified` | boolean | 否 | 是否已认证（徽章「已认证」） | `true` | 同上 |
+| `identityVerified` | boolean | 否 | 是否实名 | `true` | 同上 |
+| `location` | string | 否 | 位置描述（比 `district` 更细） | `"成都市青羊区 · 太古里附近"` | 同上 |
+| `languagesText` | string | 否 | 语言展示文案 | `"中文 / English"` | 同上 |
+| `status` | enum | 否 | 地陪状态（`active`/`rest`/`offline`） | `"active"` | 同上 |
+| `favoritesCount` | int | 否 | 被收藏数 | `42` | 同上 |
 | `isResting` | boolean | 是 | 休息中/已下架 → 卡片禁用态 | `false` | 同上 |
 | `isFavorite` | boolean | 否 | 是否已收藏 | `false` | 同上 |
 | `distanceKm` | number\|null | 否 | 距离（km），1 位小数 | `2.4` | 同上 |
@@ -335,11 +423,11 @@
 | 状态 | 用户可见表现 | 文案 |
 |---|---|---|
 | **加载中** | 首页整体骨架屏：定位条占位 + 金刚区占位 + 2 张地陪卡骨架（`.dipi-skeleton--card`）。**先骨架，后数据**；不出现白屏 | 骨架屏右下价格块占位 `--dipi-skeleton` |
-| **空态** | ① 当前城市无推荐地陪 → 模块 4 区域替换为空态块「{city}暂时还没有开放的地陪」+「看看其他城市」；② 模块 5 场景无内容 → **整段隐藏**（不留空标题）；③ 推荐接口返回空列表但模块 3 正常 | 见 §A.3.4 |
+| **空态** | ① 当前城市无推荐地陪 → 模块 5 区域替换为空态块「{city}暂时还没有开放的地陪」+「看看其他城市」；② 模块 5 场景无内容 → **整段隐藏**（不留空标题）；③ 推荐接口返回空列表但模块 3 正常 | 见 §A.3.4 |
 | **错误** | 首页数据请求失败 → 整页错误空态（`.dipi-empty__art--error` 底）+「加载失败」+「网络好像不太稳定，点击重试」+「重试」主按钮。**局部模块失败**（如评价接口失败）→ 仅该模块内提示，不影响整页 | 「加载失败，点击重试」 |
 | **无权限** | 定位权限被拒 **不进入无权限态**，降级为「手动选择城市」（见 F-04）。实名信息仅在需要下单时校验 | 定位条：「选择城市 ›」 |
 | **离线** | 顶部导航栏下方固定一条 `.dipi-notice--warning`：「网络连接已断开，显示的是上次缓存的内容」；所有提交类按钮禁用 | 「网络连接已断开」 |
-| **模块 6 条件渲染** | 仅当 `activeOrderSummary` 非空时渲染 | — |
+| **模块 7 条件渲染** | 仅当 `activeOrderSummary` 非空时渲染 | — |
 
 ### B.1.5 可点击热区与无障碍
 
@@ -354,6 +442,7 @@
 | 地陪卡评分星组 | 24 高（不可点时） | `评分 {rating} 分，{ratingCount} 条评价` | 图形本身 `aria-hidden="true"`，数字读屏 |
 | 地陪卡标签组 | 36 高 | `{tag}` 逐个朗读 | `aria-hidden="true"` 由父级合并朗读，避免碎读 |
 | 地陪卡价格区 | 不可点 | `{price} 元 每 {unit}` | 独立可读，不合并到卡片名 |
+| Banner 引导位 | 整块可点，视觉高 ≥ 320rpx | `首页引导，{title}，{subtitle}`，点击查看 | **只展示 1 张、不自动轮播**；点击按 `linkType` 路由 |
 | 场景入口 ×4 | 88×88 | `{name}，{subtitle}` | — |
 | 保障说明 ×3 | 88×88 | `{title}：{description}` | — |
 | 进行中订单提醒 | 高 ≥ 96 | `进行中的订单，{status}，点击查看` | — |
@@ -378,7 +467,7 @@
 
 #### 流程 1：进入页面并初始化条件
 
-1. `onLoad(options)` 读取 `from / keyword / city / serviceType / priceMin / priceMax / sortBy`。
+1. `onLoad(options)` 读取 `from / keyword / destination / serviceType / minPrice / maxPrice / sort`（**键名与契约一致**）。
 2. **写入 `this.filters`**（本页唯一筛选状态源），回显到筛选按钮标签上。
 3. `onLoad` 末尾**立即** `GET /api/v1/guides`（带当前 filters），先骨架屏后数据。
 4. `from=home` 且无 `keyword` → 自动 `focus` 输入框、弹出键盘。
@@ -405,8 +494,8 @@
 
 #### 流程 4：排序切换
 
-1. 顶部排序行（综合 / 价格↓ / 价格↑ / 评分）横向排列，选中项用 `.dipi-chip.is-active`。
-2. 点选 → **立即**重新请求，`sortBy` 变更，`page` 重置为 1，滚动回顶部。
+1. 顶部排序行（综合 / 价格↓ / 价格↑ / 评分）横向排列，选中项用 `.dipi-chip.is-active`；对应契约 `sort` 值依次为 `recommend`/`priceAsc`/`priceDesc`/`rating`。
+2. 点选 → **立即**重新请求，`sort` 变更（`recommend`/`priceAsc`/`priceDesc`/`rating`），`page` 重置为 1，滚动回顶部。
 3. 排序行**不吸顶**（避免与筛选条抢空间），随列表滚动。
 
 #### 流程 5：列表分页
@@ -437,27 +526,29 @@
 | 字段名 | 类型 | 必填 | 说明 | 示例值 | 来源 |
 |---|---|---|---|---|---|
 | `keyword` | string | 否 | 搜索关键词 | `"成都美食"` | 本地 `filters` → `GET /api/v1/guides?keyword=` |
-| `city` | string | 否 | 目的地筛选 | `"成都"` | 同上 `?city=` |
+| `destination` | string | 否 | 目的地筛选（**城市名**；契约用 `destination`，首页用 `city`，勿混） | `"成都"` | 同上 `?destination=` |
 | `serviceType` | string | 否 | 服务类型枚举，**只能用规范形式**（camelCase，见下方枚举表） | `"foodTour"` | 同上 `?serviceType=` |
-| `priceMin` | int | 否 | 价格下限（分） | `5000` | 同上 `?priceMin=` |
-| `priceMax` | int | 否 | 价格上限（分），`null` = 不限 | `30000` | 同上 `?priceMax=` |
-| `minRating` | number | 否 | 评分下限 | `4.5` | 同上 `?minRating=` |
+| `minPrice` | number | 否 | 价格下限（**单位：元** ⚠️ 不是分） | `50` | 同上 `?minPrice=` |
+| `maxPrice` | number | 否 | 价格上限（**单位：元** ⚠️ 不是分），缺省 = 不限 | `300` | 同上 `?maxPrice=` |
+| `rating` | number | 否 | 最低评分 0–5 | `4.5` | 同上 `?rating=` |
 | `availableWithin` | enum | 否 | `none`/`today`/`weekend`/`week` | `"today"` | 同上 `?availableWithin=` |
-| `sortBy` | enum | 是 | `default`/`priceAsc`/`priceDesc`/`rating` | `"default"` | 同上 `?sortBy=` |
+| `sort` | enum | 是 | `recommend`（默认）/`priceAsc`/`priceDesc`/`rating` | `"recommend"` | 同上 `?sort=` |
 | `page` | int | 是 | 页码，从 1 起 | `1` | 同上 `?page=` |
-| `pageSize` | int | 是 | 每页条数（固定 20） | `20` | 同上 `?pageSize=` |
+| `pageSize` | int | 是 | 每页条数（**默认 10**，上限 50；**各端点默认值不同，一律以契约为准**，见 §C.3） | `10` | 同上 `?pageSize=` |
 | `list` | object[] | 是 | 地陪摘要数组，字段同 B.1.3 的 guide 摘要段 | — | `GET /api/v1/guides` → `data.list` |
 | `total` | int | 是 | 总条数 | `137` | 同上 → `data.total` |
 | `hasMore` | boolean | 是 | 是否还有更多 | `true` | 同上 → `data.hasMore` |
 | `suggestList` | object[] | 否 | 联想词 | `[{type:'guide'\|'city'\|'service',value,guideId}]` | `GET /api/v1/guides/suggest?keyword=` → `data.list` |
 | `filterOptions` | object | 否 | 筛选项字典 | 见下 | `GET /api/v1/guides/filter-options` → `data` |
-| `filterOptions.cities` | object[] | 是 | 目的地选项 | `[{code,name,guideCount,isHot}]` | 同上 |
+| `filterOptions.destinations` | object[] | 是 | 目的地选项（契约用 `destinations`，**不是 `cities`**） | `[{code,name,guideCount,isHot}]` | 同上 |
 | `filterOptions.serviceTypes` | object[] | 是 | 服务类型选项 | `[{code,name,guideCount}]` | 同上 |
-| `filterOptions.priceRanges` | object[] | 是 | 价格区间选项（**单选**） | `[{min,max,label:"¥50-100"}]` | 同上 |
+| `filterOptions.priceRanges` | object[] | 是 | 价格区间选项（**单选**）；每项**同时给分与元** | `[{minAmount:5000,maxAmount:10000,min:50,max:100,label:"¥50-100"}]` | 同上 |
+| `filterOptions.priceRange` | object | 否 | 全量价格区间（同样分+元双份） | `{minAmount:8800,maxAmount:58800,min:88,max:588}` | 同上 |
 | `filterOptions.ratings` | object[] | 是 | 评分选项 | `[{value:4.5,label:"4.5 分以上"}]` | 同上 |
 | `filterOptions.availableWindows` | object[] | 是 | 可约时间选项 | `[{code:"today",label:"今天就能约"}]` | 同上 |
 | `activeFilterCount` | int | 是 | 已生效筛选条件数量（筛选按钮上的角标） | `3` | 客户端计算 |
 | `loadingMore` | boolean | 否 | 是否正在加载更多（本地态） | `false` | 客户端本地 |
+| — | — | — | ⚠️ **单位**：查询参数 `minPrice`/`maxPrice` 用 **元**；响应体 `priceAmount`/`priceMinAmount`/`priceMaxAmount` 用 **分**。筛选器选中的区间来自 `filter-options.priceRanges[].min`/`.max`（**元**），**直接回填查询参数，不要 ×100** | — | — |
 
 > **本页只消费「地陪摘要」结构**（`list[]` 的字段与首页推荐卡完全一致，见 §B.1.3 的 guide 摘要段）。地陪详情字段见 **§B.7.3**，下单表单字段见 **§B.8.3**，**不在本页重复定义**。
 
@@ -488,7 +579,7 @@
 | **空态 · 联想无结果** | 联想浮层不展示；不弹提示（避免噪音） | — |
 | **错误 · 首屏加载失败** | 整页错误空态 +「重试」主按钮 | 「加载失败，点击重试」 |
 | **错误 · 加载更多失败** | 列表保留已有内容，底部显示「加载失败，点击重试」**文字按钮**（不是 Toast，Toast 会消失） | 「加载更多失败，点击重试」 |
-| **错误 · 非法筛选值** | 若 URL 传入非法 `serviceType`/`priceMin`，服务端返回 `code=40001`；客户端**忽略该条件并回退到默认值**，同时在筛选按钮上方显示 `.dipi-notice--error` | 「有筛选条件无法识别，已为你重置」 |
+| **错误 · 非法筛选值** | 若 URL 传入非法 `serviceType`/`sort`，或 `minPrice > maxPrice`，服务端返回 `code=42200`；客户端**忽略该条件并回退到默认值**，同时在筛选按钮上方显示 `.dipi-notice--error` | 「有筛选条件无法识别，已为你重置」 |
 | **无权限** | 搜索本身无权限概念。**「我的收藏」等需登录的能力**若未登录 → 顶部提示条 + 引导登录 | 「登录后可查看收藏的地陪」 |
 | **离线** | 全局断网提示条；筛选抽屉的「查看 N 个结果」置禁用；列表保留上次结果 | 「网络连接已断开，显示的是上次缓存的内容」 |
 
@@ -507,7 +598,7 @@
 | 价格区间 chip | 同上 | `价格 {label}，{选中/未选中}` | 唯一红 chip |
 | 「重置」 | 88 高 | `重置全部筛选条件` | — |
 | 「查看 N 个结果」 | 88 高，块级 | `查看 {n} 个符合条件的地陪` | 抽屉内唯一实心主按钮 |
-| 排序项 ×4 | 88 高 | `按{label}排序，{当前选中项}` | — |
+| 排序项 ×4 | 88 高 | `按{label}排序，{当前选中项}` | 排序键 `sort`：`recommend`/`priceAsc`/`priceDesc`/`rating` |
 | 结果地陪卡 | ≥180 高 | 同 B.1.5 | 整卡可点 |
 | 空态「调整筛选」 | 88 高 | `调整筛选条件` | — |
 | 已选条件 chip（可单删） | 88 触达 | `移除筛选条件 {label}` | 删除用图标按钮 |
@@ -541,14 +632,18 @@
 
 #### 流程 2：发送文本消息（核心）
 
-1. 点「发送」→ **先本地插入消息**（`status: 'sending'`，`clientMessageId`）→ 立刻清空输入框 → `POST /api/v1/conversations/{conversationId}/messages`。
+1. 点「发送」→ **生成新的 `clientMessageId`**（本次发送的幂等键）→ **先本地插入消息**（`status: 'sending'`）→ 立刻清空输入框 → `POST /api/v1/conversations/{conversationId}/messages`。
 2. 成功 → 用服务端返回的 `messageId` 替换本地 `clientMessageId`，`status: 'sent'`。
 3. 失败（网络错误/非 0 code）→ `status: 'failed'`，气泡右下显示 `.dipi-chat__status--error` 感叹号图标（`--dipi-error-600`），点击区 72×72rpx。
-4. **重发**：点感叹号 → 该气泡变回 `sending` → 用**同一个 `clientMessageId`** 重发（服务端据此去重，不会产生两条）。
-5. **发送中禁用**：同一气泡在 `sending` 状态时点感叹号不生效（防并发重发）。
-6. **空内容不可发**：输入框为空 → 发送按钮 `.dipi-inputbar__send.is-disabled`（底 `--dipi-ink-200`）。
-7. **只含空格/换行** → 视为空。
-8. 发送后列表自动滚动到底部（若用户原本在底部附近；用户正在往上翻历史时**不强制滚动**，改为在右下角显示「N 条新消息 ↓」浮标）。
+4. **重发**：点感叹号 → 该气泡变回 `sending` → 用**同一个 `clientMessageId`** 重发（服务端据此幂等，不会产生两条）。
+5. **`clientMessageId` 生命周期（必须严格）**：
+   - **用户主动发起一次发送** → **新生成**一个；
+   - **同一次发送的失败重发**（感叹号重发 / 网络超时重试）→ **复用同一个**；
+   - **用户再次主动发送同样内容** → 视为新消息，**新生成**一个。
+6. **发送中禁用**：同一气泡在 `sending` 状态时点感叹号不生效（防并发重发）。
+7. **空内容不可发**：输入框为空 → 发送按钮 `.dipi-inputbar__send.is-disabled`（底 `--dipi-ink-200`）。
+8. **只含空格/换行** → 视为空。
+9. 发送后列表自动滚动到底部（若用户原本在底部附近；用户正在往上翻历史时**不强制滚动**，改为在右下角显示「N 条新消息 ↓」浮标）。
 
 #### 流程 3：WS 断线与重连（关键）
 
@@ -719,11 +814,15 @@
 5. 失败 → 保留原状态 + Toast 错误「取消失败，请稍后重试」。
 6. **可逆性**：若订单为 `pendingPayment` 且尚未支付，取消是**完全可逆**的（用户可再预约）；若已付款，进入 `refunding` 后不可逆 → 需在弹层明确写「已支付，取消后将发起退款」。
 
-#### 流程 5：待确认 → 确认完成
+#### 流程 5：待确认 → 确认完成（+ 服务中兜底）
 
 1. `pendingConfirm` 状态订单卡显示主操作次按钮「确认完成」。
 2. 点「确认完成」→ 二次确认弹层：「确认服务已完成？确认后金额将结算给地陪。」→ 「确认完成」→ `POST /api/v1/orders/{orderId}/confirm` → 状态 `completed`。
 3. 成功后 → 弹出评价引导（**不阻塞**）：Toast「已确认完成」+ 详情页顶部出现「去评价」次按钮（评价功能本期不实现，仅占位文案）。
+4. **`inService` 兜底（迁移 T24）**：服务端在 `inService` 下发 `allowedActions` 含 `confirm` 时，订单卡同样显示「确认完成」次按钮。
+   - **用途**：地陪实际已结束服务但没点「结束服务」时，用户不必被卡死在「服务中」只能去退款。
+   - **文案与流程完全一致**（同一个二次确认弹层），不给用户「异常通道」的感觉。
+   - **兜底保护**：确认后仍适用 **7 天售后窗口**（T18），地陪侧争议有出口。
 
 #### 流程 6：申请退款
 
@@ -750,11 +849,12 @@
 |---|---|---|---|---|---|
 | `orderId` | string | 是 | 订单 ID（接口用） | `"ord_20261123_0001"` | `GET /api/v1/orders` → `data.list[].orderId` |
 | `orderNo` | string | 是 | 订单号（用户可见，等宽数字） | `"SX20261123001"` | 同上 → `data.list[].orderNo` |
-| `status` | enum | 是 | 订单状态（见 §D.3，共 10 个值） | `"pendingAccept"` | 同上 → `data.list[].status` |
+| `status` | enum | 是 | **语义身份**（订单状态，10 个 camelCase 值，见 §D.3）；**唯一**的状态标识字段，不另开同义键 | `"pendingAccept"` | 同上 → `data.list[].status` |
+| `statusBadge` | string | 是 | **样式决策**（CSS 类名后缀）；取值与**客户端白名单分工**见 §A.3.3 | `"pending"` | 同上 → `data.list[].statusBadge` |
+| `statusText` | string | 是 | 徽章文字，**必须与徽章色块同时渲染** | `"待支付"` | 同上 → `data.list[].statusText` |
 | `statusText` | string | 是 | 状态中文文案（服务端下发，前端不自行映射） | `"待接单"` | 同上 |
 | `statusBadge` | string | 是 | **徽章样式决策**（视觉类名后缀）；取值必须是 Phase 1 已有类名后缀：`pending`/`confirmed`/`ongoing`/`review`/`done`/`closed`/`refund`；前端直接 `class="dipi-badge--{{statusBadge}}"`，**不做状态→样式映射** | `"confirmed"` | 同上 |
-| `statusKey` | enum | 否 | **语义状态键**（与订单状态同名，1:1）：`pending`/`pendingAccept`/`accepted`/`inService`/`pendingConfirm`/`completed`/`cancelled`/`closed`/`refunding`/`refunded`；供逻辑判断 / 埋点 / 读屏补充，**不用于样式** | `"accepted"` | 同上 |
-| `statusTone` | enum | 是 | 语义色调（`warning`/`info`/`brand`/`accent`/`success`/`neutral`/`error`）；色弱/单色模式的第二重信息 | `"info"` | 同上 |
+| `statusTone` | enum | 是 | 语义色调（`warning`/`info`/`brand`/`accent`/`success`/`ink`/`error`）；色弱/单色模式的第二重信息 | `"info"` | 同上 |
 | `userId` | string | 是 | 下单用户 ID | `"u_102395"` | 同上 |
 | `guideId` | string | 是 | 地陪 ID | `"g_2051"` | 同上 |
 | `guideName` | string | 是 | 地陪姓名 | `"阿May"` | 同上 |
@@ -971,7 +1071,7 @@
 ### B.6.1 核心功能（用户视角）
 
 1. **管理个人资料**：头像、昵称、城市、性别（可编辑项有限，编辑页为面板）。
-2. **查看订单记录**：按状态快速跳转（待支付 / 服务中 / 待确认 / 已退款 四格**互斥**统计，见 §B.6.3）。
+2. **查看订单记录**：按状态快速跳转（待支付 / 服务中 / 待确认 / 退款 四格**互斥**统计，见 §B.6.3）。
 3. **实名认证状态**：查看是否已实名，未实名给出入口。
 4. **常用设置**：消息通知开关、隐私设置、客服、意见反馈、关于我们。
 5. **登录态管理**：查看当前账号、退出登录。
@@ -981,7 +1081,7 @@
 
 #### 流程 1：进入用户主页
 
-1. `onShow` 拉 `GET /api/v1/me`（含 `orderCounts`）+ `GET /api/v1/me/settings`。
+1. `onShow` 拉 `GET /api/v1/me`（含 `orderStats`）+ `GET /api/v1/me/settings`。
 2. **未登录**（`code=401`）：
    - 页面**仍可展示**（浏览型内容），但：
    - 头像区显示「登录/注册」主按钮；
@@ -1003,9 +1103,9 @@
 
 #### 流程 3：订单记录入口
 
-1. 订单统计区 4 个数字格（**待支付 / 服务中 / 待确认 / 已退款**），点击任一格 → `storage.dipi:nav:order = { tab, highlightOrderId? }` → `wx.switchTab('/pages/order/order')`。
+1. 订单统计区 4 个数字格（**待支付 / 服务中 / 待确认 / 退款**），点击任一格 → `storage.dipi:nav:order = { tab, highlightOrderId? }` → `wx.switchTab('/pages/order/order')`。
 2. 订单页消费该参数后**删除该 key**，避免下次进入误跳转。
-3. **四格必须是互斥分桶**（定义见 §B.6.3 `orderCounts`）：每笔订单**有且仅落入一格**，四格数字之和 ≤ 订单总数。
+3. **四格必须是互斥分桶**（定义见 §B.6.3 `orderStats`）：每笔订单**有且仅落入一格**，四格数字之和 ≤ 订单总数。
    - 理由：这 4 格是**用户的「待办清单」**，不是流程阶段图 —— 用户的问题是「我现在有什么要我处理」。
    - ① 若「服务中」包含「待确认」，则「等我点确认完成」的订单（**恰恰是最需要用户处理的那批**）会被埋进语义不对的格子；
    - ② 同一笔订单又单列在「待确认」格 → **待办清单里重复计数**，是直接的误导。
@@ -1033,26 +1133,29 @@
 | `realNameStatus` | enum | 是 | `none`/`pending`/`verified`/`rejected` | `"none"` | 同上 |
 | `memberLevel` | string | 否 | 会员等级 | `"normal"` | 同上 |
 | `createdAt` | string | 否 | 注册时间 | `"2026-03-11T09:20:00+08:00"` | 同上 |
-| `orderCounts` | object | 是 | 订单数量统计（**互斥分桶**，见下方定义） | `{all:12,pendingPayment:1,ongoing:2,pendingConfirm:1,refunded:1}` | 同上 |
+| `orderStats` | object | 是 | 订单数量统计（**互斥分桶**，见下方定义）；**键名以服务端为准** | `{pendingPayment:2,ongoing:3,pendingConfirm:1,refunded:1}` | 同上 → `data.orderStats` |
 
-> **📊 `orderCounts` 互斥分桶定义（4 格 · 服务端聚合 · 已裁决）**
+> **📊 `orderStats` 互斥分桶定义（4 格 · 服务端聚合 · 已裁决）**
 >
 > | 桶 | 标签 | 包含的订单状态 | 说明 |
 > |---|---|---|---|
 > | `pendingPayment` | 待支付 | `pendingPayment` | — |
 > | `ongoing` | **服务中** | `accepted` + `inService` | 履约进行中（已接单 / 服务中） |
 > | `pendingConfirm` | 待确认 | `pendingConfirm` | 服务已结束、等你确认 |
-> | `refunded` | 已退款 | `refunding` + `refunded` | 售后流程中 + 已退款 |
+> | `refunded` | 退款 | `refunding` + `refunded` | 售后流程中 + 已退款 |
 >
-> **硬约束（写进契约 · 服务端聚合逻辑保证）**：每笔订单**有且仅落入一格**；四格数字之和 ≤ `orderCounts.all`。
+> **硬约束（写进契约 · 服务端聚合逻辑保证）**：每笔订单**有且仅落入一格**；四格数字之和 ≤ 订单总数。
 > **不纳入四格**的状态：`pendingAccept`（待接单）、`cancelled`（已取消）、`closed`（已关闭）、`completed`（已完成）——它们不是「需要用户处理」的待办，只在「全部」Tab 里可见。
+>
+> ⚠️ **键名与标签是两回事**：**键名 `refunded`**（与服务端字段、与状态枚举里的 `refunded` 同名，前端心智负担最小；已裁决）；**用户可见标签用「退款」** —— 因为这一格同时装「退款中 + 已退款」，标签若写「已退款」会与实际内容不符（用户看到「已退款 1」，实际那笔可能还在退）。契约层跟枚举对齐，体验层用中性词覆盖两种状态。
+> ⚠️ **字段名以服务端为准**：`GET /api/v1/me` 下发 `orderStats`（客户端 `mock.js` / `profile.js` 亦按此渲染），客户端**只读、不自算**。
 >
 > **为什么必须互斥（IA 依据）**：这 4 格是**用户的待办清单**，不是流程阶段图 —— 用户的问题是「我现在有什么要我处理」。
 > ① 若「服务中」包含「待确认」，则「等我点确认完成」的订单（**恰恰是最需要用户处理的那批**）会被埋进一个语义不对的格子里；
 > ② 同一笔订单又单列在「待确认」格 → **待办清单里重复计数**，这是直接的误导。
 > 因此标签用「**服务中**」而非「进行中」，语义精确对应 `accepted + inService`。
 >
-> ⚠️ **前端防御性检查（非必须，但建议保留）**：若收到的 `orderCounts` 呈包含式（`ongoing` ≥ 各格之和），前端**只显示「服务中」或「待确认」其中一格**，不同时显示两格，避免用户看到重复计数。
+> ⚠️ **前端防御性检查（非必须，但建议保留）**：若收到的 `orderStats` 呈包含式（`ongoing` ≥ 各格之和），前端**只显示「服务中」或「待确认」其中一格**，不同时显示两格，避免用户看到重复计数。
 | `favoriteCount` | int | 否 | 收藏地陪数 | `7` | 同上 |
 | `favoriteGuideIds` | string[] | 否 | 收藏地陪 ID 列表 | `["g_2051","g_1180"]` | `GET /api/v1/me/favorites` → `data.list[].guideId` |
 | `isLoggedIn` | boolean | 是 | 是否已登录（本地态 + 服务端） | `true` | `GET /api/v1/me` 成功即 true |
@@ -1086,7 +1189,7 @@
 | 昵称 | ≥88 高 | `昵称 {nickname}` | 不可点（进编辑才可改） |
 | 「编辑资料」 | 88 高 | `编辑个人资料` | 幽灵/次按钮 |
 | 实名认证行 | ≥96 高 | `实名认证，{状态文案}`，未实名时读作 `实名认证，未实名认证，点击去实名` | 右侧箭头 88 触达 |
-| 订单统计格 ×4 | ≥120 高 | `{label}订单，{n} 笔`（label ∈ 待支付 / 服务中 / 待确认 / 已退款） | 四格互斥，数字互不重复计入 |
+| 订单统计格 ×4 | ≥120 高 | `{label}订单，{n} 笔`（label ∈ 待支付 / 服务中 / 待确认 / 退款） | 四格互斥，数字互不重复计入 |
 | 「我的订单」总入口 | ≥96 高 | `查看全部订单` | — |
 | 收藏行 | ≥96 高 | `我收藏的地陪，{n} 位` | — |
 | 设置项（普通） ×6 | ≥96 高 | `{title}`，有值时读作 `{title}，{value}` | 右侧箭头 88 触达 |
@@ -1137,7 +1240,7 @@
 #### 流程 3：选择服务项
 
 1. 服务项是一个**单选组**（`aria-role="radiogroup"`），选中态用 `.dipi-chip.is-active` 风格 + 左侧勾选标记（**不占用红色**）。
-2. 点服务项 → 更新 `selectedServiceId` → 吸底条价格更新 → **下方可约时段按该服务项重新筛选**（不同服务项时长不同，时段不同）。
+2. 点服务项 → 更新 `selectedServiceId` → 吸底条价格更新 → **下方可约时段集合不变**（时段是**地陪级**的，见下方「时段是地陪级」说明；切换服务项只改价格与时长，不改可选时段）。
 3. 服务项含 `durationHours`（时长）与 `includes[]`（包含内容），选中后展示在「服务项」区块内联展开（不跳页）。
 4. **不可选的服务项**：地陪休息中 / 服务项已下架 → 整行置灰 + 「暂不可约」角标 + 不可点。
 
@@ -1213,13 +1316,21 @@
 | `guide.services[].includes` | string[] | 否 | 包含内容（展开项内联展示） | `["3 道菜","饮品"]` | 同上 |
 | `guide.services[].icon` | string | 否 | 图标名（图标字体资源名，非 emoji） | `"bowl"` | 同上 |
 | `guide.services[].isAvailable` | boolean | 是 | 是否可约（false → 置灰不可选） | `true` | 同上 |
-| `guide.availableSlots` | object[] | 否 | 可约时段（按服务项筛选后展示）；**至少覆盖未来 14 天 × 每天 3 时段** | 见下 | 同上 |
-| `guide.availableSlots[].slotId` | string | 是 | **稳定唯一标识**（如 `"2026-11-25-am"` / `-pm` / `-night`）；P8 提交时**原样回传**，服务端据此核销时段 | `"2026-11-25-am"` | 同上 |
+| `guide.availableSlots` | object[] | 否 | **地陪级**可约时段（**不按服务项筛选**）；至少覆盖未来 14 天 × 每天 3 时段；任一服务项占用某时段后，该时段对**该地陪的全部服务项**都不可约 | 见下 | 同上 |
+| `guide.availableSlots[].slotId` | string | 是 | **稳定唯一标识**（如 `"2026-11-25-am"` / `-pm` / `-night`）；**核销键 = 地陪 + slotId**（地陪是真人，同一天同一时段只能陪一个人）；P8 提交时**原样回传** | `"2026-11-25-am"` | 同上 |
 | `guide.availableSlots[].date` | string | 是 | 日期（**仅展示，不提交**） | `"2026-11-25"` | 同上 |
 | `guide.availableSlots[].timeSlot` | string | 是 | 时段文案（**仅展示，不提交**） | `"09:00–12:00"` | 同上 |
 | `guide.availableSlots[].available` | boolean | 是 | 是否可约（**false → P7/P8 置灰不可选**，视觉用 `--dipi-ink-400` 禁止态） | `true` | 同上 |
 | `guide.reviews` | object[] | 否 | 评价列表 | `[{reviewId,userNickname,rating,content,createdAt,reply}]` | 同上 |
 | `guide.guarantees` | object[] | 否 | 该地陪可享的保障项 | `[{code,title,description}]` | 同上 |
+| `guide.verified` | boolean | 否 | 是否已认证（徽章） | `true` | 同上 |
+| `guide.identityVerified` | boolean | 否 | 是否实名 | `true` | 同上 |
+| `guide.location` | string | 否 | 位置描述 | `"成都市青羊区 · 太古里附近"` | 同上 |
+| `guide.languagesText` | string | 否 | 语言展示文案 | `"中文 / English"` | 同上 |
+| `guide.serviceTypeName` | string | 否 | 服务类型中文名 | `"美食陪逛"` | 同上 |
+| `guide.status` | enum | 否 | 地陪状态（`active`/`rest`/`offline`） | `"active"` | 同上 |
+| `guide.favoritesCount` | int | 否 | 被收藏数 | `42` | 同上 |
+| `guide.priceMaxAmount` | int\|null | 否 | 最高价（分） | `32800` | 同上 |
 | `selectedServiceId` | string | 否 | 当前选中的服务项（本地态） | `"si_9012"` | 客户端 |
 | `reviewsExpanded` | boolean | 否 | 评价是否已全部展开（本地态） | `false` | 客户端 |
 | `conversationId` | string | 否 | 咨询时创建的会话 ID | `"cv_77213"` | `POST /api/v1/conversations` → `data.conversationId` |
@@ -1228,12 +1339,15 @@
 
 > **⏱ `slotId` 原子性约定（重要）**
 > `availableSlots[].slotId` 是**稳定唯一标识**（形如 `2026-11-25-am`），**不是**前端临时生成的序号。
+> - **核销键 = 「地陪 + slotId」**。地陪是**一个真人**，同一天同一时段只能陪一个人 —— 约了「美食陪逛」就同时约不了「城市漫游」。这不是技术限制，是**物理约束**。
+> - `availableSlots[]` 的可用性按**地陪级**计算：**该时段被任一服务项占用 → 该地陪所有服务项的该时段都 `available:false`**。因此**切换服务项不会改变可选时段集合**。
 > - P7/P8 展示与选择均以 `slotId` 为准；**P8 提交时原样回传 `slotId`**，**不传 `date` + `timeSlot` 组合**。
 > - 服务端据此**原子核销**时段（「选时段 → 提交」是一次原子操作），避免用户选到已被他人抢走的时段。
+> - **取消订单会释放时段**（该时段重新变为可约）。
 > - `available: false` 的时段在 P7/P8 **置灰不可选**（`--dipi-ink-400` 禁止态），点击不响应、不 Toast。
 > - `availableSlots` **至少覆盖未来 14 天 × 每天 3 时段**（上午 / 下午 / 晚间）；超出范围的日期不展示。
 > - `availableSlots[]` **严格 4 个字段**（`slotId` / `date` / `timeSlot` / `available`），无 `remaining` —— 前端**不得**引用 `remaining`。
-> - 若提交时服务端判定 `slotId` 已被占用 → 返回业务错误码，前端在时段区提示「该时段刚被约走，请选择其他时段」并**自动重选第一个可约时段**，其余表单内容保留。
+> - 若提交时服务端判定 `slotId` 已被占用 → 返回 `409` + `data.reason === 'slot_taken'`（`slot_not_found` 为时段已下线），前端在时段区提示「该时段已被预约，请选择其他时段」并**自动重选第一个可约时段**，其余表单内容保留。
 >
 > **收藏端点**：`PUT /api/v1/me/favorites/:guideId` —— **幂等 toggle**，响应 `{ guideId, favorited, favoritesCount }`。**不提供** `POST`/`DELETE` 版本（避免两套数据源）。前端以返回的 `favorited` 为准更新图标态，请求失败则**回滚图标态**并 Toast。
 
@@ -1290,7 +1404,7 @@
 2. 拉 `GET /api/v1/guides/{guideId}` 取 `guide.services` 与 `guide.availableSlots`（**可与详情页复用同一接口**，不新增端点）。
 3. 初始化表单：
    - `selectedServiceId` = URL 传入的 `serviceId`；**未传** → 取第一个 `isAvailable === true` 的服务项；**都没有** → 页面进入「无可约服务」空态（见 §B.8.4）。
-   - `selectedSlotId` = 默认选**第一个可约时段**（降低操作步数）；无可约时段 → 时段区显示空态且 CTA 禁用。
+   - `selectedSlotId` = 默认选**第一个可约时段**（降低操作步数）；无可约时段 → 时段区显示空态且 CTA 禁用。时段集合是**地陪级**的，与 `serviceId` 无关。
    - `travelers` = 1；`contactName` / `contactPhone` = 从 `GET /api/v1/me` 带出（用户已填过则预填，可改）。
    - `remark` = 空。
 4. **草稿回填**：若 `storage.dipi:draft:order` 存在且 `draft.guideId === guideId` → **回填**用户上次填写的联系人/人数/备注，并在页面顶部显示 `.dipi-notice--brand`：「已为你保留上次填写的内容」+「清空」文字按钮。回填**不覆盖**本次 URL 传入的 `serviceId`（服务项以本次选择为准）。
@@ -1302,7 +1416,7 @@
 2. 点时段项 → 记录其 **`slotId`**（原样保存，不做本地重组）→ 选中态（勾选标记 + `--dipi-brand-50` 底，**不用红色**）；切换时段时**若价格随日期变化则更新总价**。
 3. 不可约时段（`available === false`）→ 置灰 + 斜杠 + `aria-disabled="true"`，点击**不响应**（不 Toast，避免噪音）。
 4. 时段区固定在表单上部（滚到底也能看到当前选择摘要条：「11 月 25 日 09:00–12:00 · 更换」）。
-5. **提交时只传 `slotId`**（不传 `date` + `timeSlot` 组合），服务端据此原子核销时段；若已被占用 → 提示「该时段刚被约走，请选择其他时段」+ 自动重选第一个可约时段，**其余表单内容保留**。
+5. **提交时只传 `slotId`**（不传 `date` + `timeSlot` 组合），服务端据此**原子核销**时段（核销键 = 地陪 + slotId）；若已被占用 → `409` + `reason=slot_taken` → 提示「**该时段已被预约，请选择其他时段**」+ 自动重选第一个可约时段，**其余表单内容保留**。
 
 #### 流程 3：填人数
 
@@ -1327,7 +1441,7 @@
    - 优惠：`discountAmount`（有才显示，前置 `-`）
    - **总额**：`totalAmount` → 用 `.dipi-price-block`（**全屏唯一红实心块**，视觉规范 §6.4）
 2. 任何影响价格的变更（服务项 / 时段 / 人数）→ **立即重算并更新**，动画 240ms 数字淡入，**不做滚动动画**（避免跳动）。
-3. 服务端价格为准：算价结果仅供预览；提交后**以服务端返回的 `totalAmount` 为准**，若不一致 → 弹层「价格已更新，请确认」+ 更新金额 + 仍可提交（不静默改价）。
+3. **服务端算总价**（前端传的金额一律被忽略）：算价结果仅供提交前预览；提交后**以服务端返回的 `totalAmount` 为准**，若不一致 → 弹层「价格已更新，请确认」+ 更新金额 + 仍可提交（不静默改价）。
 
 #### 流程 6：提交订单 → 支付
 
@@ -1357,7 +1471,7 @@
 | `conversationId` | string | 否 | 来源会话（来自聊天页时带，服务端据此关联会话与订单） | `"cv_77213"` | URL query `?conversationId=` |
 | `guide` | object | 是 | 地陪信息（复用详情接口，取服务项与时段） | — | `GET /api/v1/guides/:guideId` → `data.guide` |
 | `guide.services` | object[] | 是 | 可选服务项（结构见 §B.7.3） | `[{serviceId,name,durationHours,priceAmount,priceUnitText,…}]` | 同上 |
-| `guide.availableSlots` | object[] | 否 | 可约时段（结构见 §B.7.3；**至少覆盖未来 14 天 × 3 时段**） | `[{slotId,date,timeSlot,available}]` | 同上 |
+| `guide.availableSlots` | object[] | 否 | **地陪级**可约时段（结构见 §B.7.3；至少覆盖未来 14 天 × 3 时段；**不按服务项筛选**） | `[{slotId,date,timeSlot,available}]` | 同上 |
 | `guide.name` | string | 是 | 地陪姓名（页面标题与摘要） | `"阿May"` | 同上 |
 | `guide.avatarUrl` | string | 是 | 地陪头像（摘要卡） | `"https://cdn.dipi.cn/g/2051.jpg"` | 同上 |
 | `guide.isResting` | boolean | 是 | 休息中 → 整页提示 + CTA 禁用 | `false` | 同上 |
@@ -1376,7 +1490,7 @@
 | `slot.timeSlot` | string | 是 | 时段文案（**仅展示，不提交**） | `"09:00–12:00"` | 同上 |
 | `travelers` | int | 是 | 同行人数（1–20） | `2` | 客户端表单 |
 | `contactName` | string | 是 | 联系人姓名（≤20 字） | `"小满"` | 客户端表单（预填自 `GET /api/v1/me`） |
-| `contactPhone` | string | 是 | 联系人手机号（11 位） | `"13800005678"` | 客户端表单（预填自 `GET /api/v1/me`） |
+| `contactPhone` | string | 是 | 联系人手机号（**6–20 位数字**，非固定 11 位） | `"13800005678"` | 客户端表单（预填自 `GET /api/v1/me`） |
 | `remark` | string | 否 | 备注（≤200 字） | `"不吃辣，多点一份汤"` | 客户端表单 |
 | `meetingPoint` | string | 否 | 见面地点（≤50 字，可留空由地陪提议） | `"宽窄巷子东广场"` | 客户端表单 |
 | `unitPriceAmount` | int | 是 | 服务项**单价**（分）= `service.priceAmount` | `36000` | 客户端实时算价 |
@@ -1398,9 +1512,11 @@
 > meetingPoint, remark?, conversationId?, idempotencyKey
 > ```
 > - **`serviceId` 与读接口同名**：`guide.services[].serviceId` → 提交 `serviceId`，**前端不写第二套映射**。
-> - **`slotId` 原样回传**：服务端据此**原子核销**时段。**只传 `slotId`，不传 `date` + `timeSlot` 组合**（那两个字段仅用于界面展示）。
+> - **`slotId` 原样回传**：服务端据此**原子核销**时段，**核销键 = 地陪 + slotId**（地陪是真人，同一时段只能陪一个人）。**只传 `slotId`，不传 `date` + `timeSlot` 组合**（那两个字段仅用于界面展示）。
 > - `conversationId` 为**可选**入参：从聊天页下单时带，服务端据此回写会话并关联订单；其他入口不带。
 > - `remark` 可选；`idempotencyKey` 必带（同一次下单重试复用同一个，换订单才换新的）。
+> - 🚫 **不要提交** `date` + `timeSlot` 组合、`serviceItemId`、`peopleCount`。
+> - 💰 **服务端算总价**：前端传的 `priceAmount` / `totalAmount` / `unitPriceAmount` **一律被服务端忽略**。前端算价仅供**提交前预览**，以服务端返回的订单对象为准（不符时弹「价格已更新，请确认」）。
 >
 > **💰 金额字段命名（与 03 契约对齐 · 已裁决）**
 > **订单金额只有 3 个字段，语义无歧义**：
@@ -1525,10 +1641,17 @@ WS 通道（可选/兜底）：仅在 HTTP 通道不可用时降级使用
 2. **WS 信封严格三字段** `{ type, payload, ts }`，客户端读 **`msg.payload`**，**不读 `msg.data`**。
 3. 客户端发 WS `message.send` 仅作**兜底 / 加速**；**WS 不可用时直接走 HTTP，功能不降级**（发消息、收消息、读历史三条链路都不依赖 WS 才能用）。
 
-**去重与失败处理**：
-4. WS `message.new` 带回的 `clientMessageId` 用于**对账**：本地有同 `clientMessageId` 的 `sending` 气泡 → 替换为服务端 `messageId` 并置 `sent`；本地没有 → 视为对方/他人的新消息，正常插入。
-5. **按 `messageId` 去重**：HTTP 与 WS 同时到达同一条 → **只插入一次**。
-6. 两条通道**都失败** → 气泡置 `failed` + 感叹号，重发**复用同一 `clientMessageId`**（见 §B.3.2 流程 2、§F-07）。
+**去重与失败处理（服务端已保证幂等，客户端只需对账）**：
+4. **服务端按 `(conversationId, clientMessageId)` 幂等**：`createMessage` 入口统一去重，命中已有消息则**返回既有消息**（`200` + 既有 `messageId`），不新建；HTTP 与 WS 两条入口**共用同一个 service 函数**，去重逻辑只有一处；幂等键作用域限定在会话内，避免跨会话碰撞。
+   - **为什么幂等必须在服务端**：真正的重复场景是「HTTP 请求在服务端**已成功落库**，但**响应在网络上丢了**」→ 客户端超时重发。这条路径上客户端根本不知道服务端已成功，**只有服务端记得**。客户端去重做不了这个场景。
+5. WS `message.new` 带回的 `clientMessageId` 用于**对账**：本地有同 `clientMessageId` 的 `sending` 气泡 → 替换为服务端 `messageId` 并置 `sent`；本地没有 → 视为对方/他人的新消息，正常插入。
+6. **跨通道去重键 = `clientMessageId`**（**不是 `messageId`**）。理由：HTTP 与 WS 是服务端两条独立路径，在服务端幂等落地前，同一逻辑消息经两条通道到达时**可能各落一条、`messageId` 与 `seq` 都不同** —— 用 `messageId` 去重会漏掉重复插入。服务端幂等落地后，「两条通道各落一条」已从源头消除，客户端这层去重退化为**防御性**。
+7. **历史补拉去重键 = `messageId` / `seq`**（服务端下发的历史消息没有客户端 `clientMessageId`）—— 与第 6 条不冲突，两者用于不同场景。
+8. **`clientMessageId` 的生成规则（必须严格）**：
+   - **用户主动发起一次发送** → 生成**新的** `clientMessageId`；
+   - **同一次发送的失败重发**（感叹号重发、网络超时重试）→ **复用同一个** `clientMessageId`；
+   - **用户再次主动发送同样内容** → 视为新消息，生成**新的** `clientMessageId`（所以服务端按 `clientMessageId` 幂等**不会**吞掉用户的新消息）。
+9. 两条通道**都失败** → 气泡置 `failed` + 感叹号，重发**复用同一 `clientMessageId`**（见 §B.3.2 流程 2、§F-07）。
 
 > 🛡️ **客户端防御性归一（保留，不要删）**
 > 客户端 `utils/ws.js` 应保留「兼容服务端 `{ type, data }` 旧信封」的**归一处理**：
@@ -1556,7 +1679,7 @@ WS 通道（可选/兜底）：仅在 HTTP 通道不可用时降级使用
 |---|---|---|---|---|---|
 | 首页 | 搜索页 | URL query | `from` | string | 固定 `"home"`，用于决定是否自动聚焦 |
 | 首页 | 搜索页 | URL query | `keyword` | string | 预填关键词 |
-| 首页 | 搜索页 | URL query | `city` | string | 预选目的地 |
+| 首页 | 搜索页 | URL query | `destination` | string | 预选目的地（**契约用 `destination`，非 `city`**） |
 | 首页 | 搜索页 | URL query | `serviceType` | string | 预选服务类型枚举 |
 | 首页 | 搜索页 | URL query | `scene` | string | 场景入口的 code，用于追加场景条件 |
 | 首页/搜索页 | 订单页 | storage | `dipi:nav:order.tab` | string | 目标状态 Tab |
@@ -1603,6 +1726,17 @@ WS 通道（可选/兜底）：仅在 HTTP 通道不可用时降级使用
 | **用户主页** | `onLoad` 拉 me + settings | ✅ 拉 me（缓存 5 分钟内可跳过）；settings 必拉 | ✅ | ❌ | ❌ | ❌ |
 | **地陪详情页 P7** | `onLoad` 拉 `GET /api/v1/guides/:guideId` | ❌ 不重拉（除非 `isResting` 等关键状态变更） | ✅ 重拉详情 | ⚠️ 仅当地陪状态变更（`isResting`/`isAvailable` 翻转）时 WS 推 `guide.updated` → 只更新按钮可用态 | ❌ | ❌（评价就地展开，用已下发数据） |
 | **下单确认页 P8** | `onLoad` 拉 `GET /api/v1/guides/:guideId` + `GET /api/v1/me` | ✅ **只重拉 `availableSlots`**（可约时段会变）→ 仅更新时段区与总价，**绝不重置用户已填表单**（联系人 / 人数 / 备注 / 见面地点一律保留）；**只有用户主动点「重新选择」才清空对应项** | ❌（禁用下拉，避免误触丢焦点） | ⚠️ 时段变更 → 更新时段区并提示「部分时段已不可约」；当前 `slotId` 已不可约 → 自动重选第一个可约时段，**其余表单内容保留** | ❌ | ❌ |
+
+**各端点 `pageSize` 默认值（以契约为准，前端不自行决定）**：
+
+| 端点 | 默认 pageSize | 上限 |
+|---|---|---|
+| `GET /api/v1/guides`（搜索结果） | **10** | 50 |
+| `GET /api/v1/guides/:id` 的评价列表 | 10 | — |
+| `GET /api/v1/orders`（订单列表） | 20 | — |
+| `GET /api/v1/conversations`（会话列表） | 20 | — |
+| `GET /api/v1/notifications`（通知列表） | 20 | — |
+| `GET /api/v1/me/favorites` | 10 | — |
 
 **统一规则**：
 1. `onShow` 的重拉**必须**做「上次请求未完成则跳过」保护，避免页面快速切换造成竞态。
@@ -1675,7 +1809,7 @@ flowchart TD
 | 1 | `pendingPayment` | 待支付 | `.dipi-badge--pending` | 待支付 | 支付、取消 | 立即支付（**主**）、取消订单（危险幽灵）、联系地陪（次） | 否 |
 | 2 | `pendingAccept` | 待接单 | `.dipi-badge--confirmed` | 待接单 | 取消、联系 | 取消订单（危险幽灵）、联系地陪（次） | 否 |
 | 3 | `accepted` | 已接单 | `.dipi-badge--confirmed` | 已接单 | 取消、联系 | 取消订单（危险幽灵）、联系地陪（次） | 否 |
-| 4 | `inService` | 服务中 | `.dipi-badge--ongoing` | 服务中 | 申请退款、联系 | 申请退款（危险幽灵）、联系地陪（次） | 否 |
+| 4 | `inService` | 服务中 | `.dipi-badge--ongoing` | 服务中 | 确认完成（兜底）、申请退款、联系 | 确认完成（次）、申请退款（危险幽灵）、联系地陪（次） | 否 |
 | 5 | `pendingConfirm` | 待确认 | `.dipi-badge--review` | 待确认 | 确认完成、申请退款、联系 | 确认完成（**主**）、申请退款（危险幽灵）、联系地陪（次） | 否 |
 | 6 | `completed` | 已完成 | `.dipi-badge--done` | 已完成 | 评价、再约 | 去评价（次）、再次预约（次） | 否（可转 `refunding`） |
 | 7 | `cancelled` | 已取消 | `.dipi-badge--closed` | 已取消 | 再约、咨询 | 再次预约（次）、再次咨询（次） | **是** |
@@ -1693,10 +1827,9 @@ flowchart TD
 >
 > | 服务端下发字段 | 类型 | 含义 |
 > |---|---|---|
-> | `status` | enum | 10 态之一 |
+> | `status` | enum | **语义身份**：10 态之一；唯一的状态标识字段（**不提供 `statusKey` / `statusCode` 等同义键**） |
 > | `statusText` | string | 状态中文文案（前端**不自行翻译**，且**必须渲染出来**——徽章不能只有颜色） |
 > | `statusBadge` | string | **样式决策**：徽章类名后缀，取值限 Phase 1 已有类名（`pending`/`confirmed`/`ongoing`/`review`/`done`/`closed`/`refund`），前端直接拼类名，CSS 零改动 |
-> | `statusKey` | enum | **语义身份**：与订单状态 1:1，供逻辑 / 埋点 / 读屏补充，**不用于样式** |
 > | `statusTone` | enum | 语义色调（色弱/单色模式的第二重信息） |
 > | `allowedActions` | string[] | **权威的可执行操作集合**（`pay`/`cancel`/`confirm`/`refund`/`contact`/`review` 的子集） |
 > | `canUserPay` | boolean | 是否可支付（`allowedActions` 的便捷派生） |
@@ -1707,7 +1840,7 @@ flowchart TD
 > | `canUserReview` | boolean | 是否可评价 |
 >
 > **前端读取优先级**：`allowedActions`（权威数组）→ 若缺失则退化为 6 个 `canUserXxx` 布尔位。两者由服务端**同源生成**，前端**不做任何 status→操作的换算**。
-> **前端严禁**出现 `status === 'pendingPayment' ? 显示支付按钮 : ...` 这类判断。原因**：状态机有 10 态、23 条迁移，且退款驳回要按 `refundFromStatus` 回退到**动态**状态——前端硬编码必然漏边，必然与后端漂移。前端只做一件事：读服务端下发的字段决定按钮的显示与禁用。
+> **前端严禁**出现 `status === 'pendingPayment' ? 显示支付按钮 : ...` 这类判断。原因**：状态机有 10 态、24 条迁移，且退款驳回要按 `refundFromStatus` 回退到**动态**状态——前端硬编码必然漏边，必然与后端漂移。前端只做一件事：读服务端下发的字段决定按钮的显示与禁用。
 > 违反此铁律的代码**视为缺陷**（Part G 检查项 G-38、G-39、G-83）。
 
 ### D.3.2 合法迁移（穷举）
@@ -1737,9 +1870,12 @@ flowchart TD
 | T21 | `cancelled` | — | — | — | **终态**，不可再迁移 |
 | T22 | `closed` | — | — | — | **终态** |
 | T23 | `refunded` | — | — | — | **终态** |
+| **T24** | **`inService`** | **用户确认完成（兜底）** | **`completed`** | **用户** | **地陪已实际结束服务但未点「结束服务」时的兜底通道，防止用户被卡死在「服务中」而只能走退款。走与 T15 **相同**的二次确认弹层；完成后**仍适用 7 天售后窗口（T18）**，地陪侧争议有出口。服务端 `allowedActions` 在 `inService` 下下发 `confirm` 即对应此迁移** |
+
+> **状态总数 10 个不变，合法迁移 24 条（T01–T24）**。T24 是唯一新增的用户侧兜底迁移，不改变任何已有迁移的方向。
 
 **非法迁移（服务端必须拒绝并返回 `code=40901`，前端必须容错并刷新该订单）**：
-`pendingPayment → inService`、`pendingPayment → completed`、`pendingAccept → inService`（未经 `accepted`）、`completed → inService`、`cancelled → *`（任何非终态）、`closed → *`、`refunded → *`、`pendingPayment → accepted`。
+`pendingPayment → inService`、`pendingPayment → completed`、`pendingAccept → inService`（未经 `accepted`）、`completed → inService`、`cancelled → *`（任何非终态）、`closed → *`、`refunded → *`、`pendingPayment → accepted`。服务端返回 **`code=40900`**（`data.currentStatus` / `data.action` / `data.allowedActions` 给出当前态与允许动作），前端**以服务端返回值刷新该订单**，不做本地推断。
 
 ### D.3.3 状态机图
 
@@ -1762,6 +1898,7 @@ stateDiagram-v2
 
     inService --> pendingConfirm : 地陪结束服务
     inService --> refunding : 用户申请退款
+    inService --> completed : 用户确认完成（兜底 T24）
 
     pendingConfirm --> completed : 用户确认完成
     pendingConfirm --> completed : 超时自动确认 (72h)
@@ -1857,7 +1994,7 @@ flowchart TD
 
 **动效红线**：`prefers-reduced-motion` 在小程序中不可用，因此**不做视差、不做自动轮播、不做无限循环动画**（骨架屏高光动画除外，1.4s 循环属可接受范围）。
 
-## E.3 无障碍检查表（20 条，逐条可验证）
+## E.3 无障碍检查表（21 条，逐条可验证）
 
 > 判定方式：代码走查 + 微信开发者工具「调试 → 基础库 ≥ 2.32.0」+ 屏幕阅读器实机验证（iOS VoiceOver / Android TalkBack）。
 
@@ -1883,6 +2020,7 @@ flowchart TD
 | **A-18** | 横屏可用 | 横屏下不出现内容被裁切、吸底按钮遮挡输入栏、导航栏高度错乱 | 全局 |
 | **A-19** | 色弱模拟 | 用「设置 → 辅助功能 → 显示与文字大小 → 色彩滤镜（绿色滤镜）」全屏模拟后，所有状态仍可区分 | 全局 |
 | **A-20** | 读屏走查 | iOS VoiceOver + Android TalkBack 各走查一遍主链路（首页→搜索→下单→支付→订单→聊天），确认无「未命名按钮」「朗读顺序错乱」「焦点陷阱」 | 全局 |
+| **A-21** | **徽章不靠颜色** | 订单状态徽章**必须同时渲染 `statusText` 文字**（服务端下发的中文文案），**不得**只渲染 `statusBadge` 颜色块或只用 `statusTone`；色弱 / 单色 / 灰度模式下（§E.3 A-19）仍能区分全部 10 种状态 | 订单页 |
 
 **补充硬性约定**：
 - 聊天页「未读定位高亮」与「以下为新消息」分隔用 `aria-live="polite"`，让读屏用户知道位置跳转了。
@@ -1923,7 +2061,7 @@ flowchart TD
 
 > 每条可打勾。**P0 未过 = 不可发布**；**P1 未过 = 需登记排期**。
 
-## G.0 全局（19 条）
+## G.0 全局（20 条）
 
 - [ ] G-01 `app.wxss` 顶部已 `@import "styles/tokens.wxss"` 与 `"styles/components.wxss"`，代码中无裸 HEX、无阶梯外字号、无裸间距（视觉规范 §8.1）
 - [ ] G-02 所有字段命名 camelCase；接口 body / URL query / storage key 一致；无 snake_case
@@ -1944,14 +2082,15 @@ flowchart TD
 - [ ] G-17 破坏性操作（取消订单/申请退款/退出登录/清除缓存）均有二次确认弹层，且弹层默认焦点在「取消」
 - [ ] G-18 真实设备验证：iPhone SE(375) / iPhone Pro Max(430) / 安卓小屏(360) / 安卓大屏(412) 各一轮；含**横屏**一轮
 - [ ] G-81 **同一业务实体在读接口与写接口中同名**：服务项一律 `serviceId`（`guide.services[].serviceId` ↔ 提交体 `serviceId` ↔ URL query `serviceId`），**代码中不得出现 `serviceItemId` 等别名**，前端不写第二套映射
+- [ ] G-91 **订单金额只读 3 个字段**：`unitPriceAmount` / `subtotalAmount` / `totalAmount`；**不得**用无前缀的 `priceAmount` 读取订单金额（该字段只存在于地陪层 `guide.priceAmount` / `guide.services[].priceAmount`，语义是起步价/单价，**别混**）
 
 ## G.1 首页（6 条）
 
-- [ ] G-19 首页模块顺序固定为：定位条 → 搜索框 → 服务类型金刚区 → 推荐地陪横滑 → 场景入口 → 进行中订单（条件） → 保障说明
+- [ ] G-19 首页模块顺序固定为 8 段：定位条 → 搜索框 → **Banner 引导位** → 服务类型金刚区 → 推荐地陪横滑 → 场景入口 → 进行中订单（条件） → 保障说明
 - [ ] G-20 定位失败/拒绝**不阻断浏览**，定位条降级为「选择城市 ›」；定位结果与缓存城市不一致时**不自动切换内容**，只提示
 - [ ] G-21 首页**无任何实心主按钮**；实心主按钮只在**地陪详情页 P7** 与**下单确认页 P8** 各自页面内出现（各 1 个）
 - [ ] G-22 金刚区 6 个入口分别带 `serviceType` 枚举进入搜索页，搜索页**自动拉取结果**（不等点搜索）
-- [ ] G-23 模块 4 首屏可见 ≥ 2 张完整地陪卡（不被模块 6 挤出）
+- [ ] G-23 模块 5 首屏可见 ≥ 2 张完整地陪卡（不被模块 7 挤出）
 - [ ] G-24 地陪卡「休息中」态：`opacity .45` + 角标 + 不可下单（可咨询），**不能只置灰不解释**
 
 ## G.2 搜索页（7 条）
@@ -1964,7 +2103,7 @@ flowchart TD
 - [ ] G-30 空态保留已选条件 chip 行（可单删），「调整筛选」打开抽屉时**保留**当前条件
 - [ ] G-82 `serviceType` **只发送规范 camelCase 枚举**（`foodTour`/`cityWalk`/`sightseeing`/`photo`/`parentChild`/`errand`）；代码中**不得出现** `food`、`food_tour` 等别名，也不写别名兼容分支；收到表外 `code` → chip 置灰不可选 + 提示「有筛选条件无法识别，已为你重置」，不抛错、不白屏
 
-## G.3 聊天页（9 条）
+## G.3 聊天页（12 条）
 
 - [ ] G-31 消息先本地插入（`sending`）再发请求；失败转 `failed` + 感叹号；**重发复用同一 `clientMessageId`**
 - [ ] G-32 `sending` 状态禁止并发重发；空内容/纯空格发送按钮为禁用态
@@ -1974,9 +2113,12 @@ flowchart TD
 - [ ] G-36 未读定位：命中 `firstUnreadSeq` → 滚动至上方 1/3 处 + 高亮 3s + 「以下为新消息」分隔；未命中 → `aroundSeq` 精确拉取
 - [ ] G-37 上滑加载更早消息时**前插**并**补偿滚动位置**，不产生跳动；`wx:key` 用 `messageId`
 - [ ] G-86 WS 信封**严格三字段** `{ type, payload, ts }`：客户端读 **`msg.payload`**，**不读 `msg.data`**（不存在）；未知 `type` 必须静默忽略
-- [ ] G-87 消息发送**以 HTTP 响应为权威**（`POST /api/v1/conversations/:id/messages` 返回即置 `sent`）；WS `message.new` 按 `messageId` **去重**，HTTP 与 WS 同时到达同一条**只插入一次**；本规范**不含 `message.ack`**，客户端不得等待或依赖它
+- [ ] G-87 消息发送**以 HTTP 响应为权威**（`POST /api/v1/conversations/:id/messages` 返回即置 `sent`）；本规范**不含 `message.ack`**，客户端不得等待或依赖它
+- [ ] G-92 **跨通道去重键 = `clientMessageId`**（**不是 `messageId`**）：HTTP 与 WS 是服务端两条独立路径，在服务端幂等落地前同一逻辑消息经两条通道到达时 `messageId` / `seq` 会不同；服务端已按 `(conversationId, clientMessageId)` 幂等后，这层客户端去重转为**防御性**。**历史补拉**才用 `messageId` / `seq` 去重（两者场景不同，不冲突）
+- [ ] G-93 **`clientMessageId` 生命周期**：用户主动发起一次发送 → **新生成**；同一次发送的失败重发（感叹号 / 超时重试）→ **复用同一个**；用户再次主动发送同样内容 → **新生成**（故服务端按 `clientMessageId` 幂等不会吞掉用户的新消息）
+- [ ] G-90 `utils/ws.js` 保留**防御性归一** `const payload = msg.payload ?? msg.data ?? {};`（兼容服务端旧 `{ type, data }` 信封，**不得删除**）；WS 不可用时**直接走 HTTP**，发消息 / 收消息 / 读历史三条链路**功能不降级**
 
-## G.4 订单页（9 条）
+## G.4 订单页（12 条）
 
 - [ ] G-38 订单状态枚举共 **10 个**，与 §D.3.1 完全一致；前端**不硬编码**状态→按钮映射，一律读 `canUserPay/canUserCancel/canUserConfirm/canUserRefund/canUserContact`
 - [ ] G-39 `statusText` 由服务端下发，前端**不自行翻译**状态文案
@@ -1985,8 +2127,11 @@ flowchart TD
 - [ ] G-42 详情视图（`viewMode='detail'`）返回箭头**不调 `navigateBack`**，切回列表态并保留滚动位置
 - [ ] G-43 越权（40302）→ 整页错误态「无权查看该订单」，**不渲染任何该订单字段**
 - [ ] G-44 退款驳回 → 订单按 `refundFromStatus` 恢复，页面显示 `.dipi-notice--error` + 「重新申请」
-- [ ] G-83 徽章样式**直接用** `class="dipi-badge--{{order.statusBadge}}"`；**严禁**写 `status === ... ? 'dipi-badge--...' : ...` 这类状态→样式映射（§A.3.3 的表是**服务端生成依据**，不是前端运行时映射表）；`statusBadge` 缺失 → 兜底 `.dipi-badge--closed` + 显示 `statusText`
+- [ ] G-83 徽章样式**直接用** `class="dipi-badge dipi-badge--{{order.statusBadge}}"` + `{{order.statusText}}`；**严禁**写 `status === ... ? 'dipi-badge--...' : ...` 这类状态→样式映射（§A.3.3 的表是**服务端生成依据**，不是前端运行时映射表）；`statusBadge` 缺失 → 兜底 `.dipi-badge--closed` + 显示 `statusText`
 - [ ] G-84 操作可用性**优先读 `allowedActions[]`**（权威数组），缺失时退化为 6 个 `canUserXxx` 布尔位；两者**都不做**本地状态换算
+- [ ] G-88 徽章白名单按**双向校验**执行、**🚫 不断言固定数量**：① **CSS ⊆ 白名单**（CSS 里每个状态类都要有白名单项）；② **服务端下发 ⊆ CSS**（每个下发值都必须能在 `components.wxss` 找到 `.dipi-badge--xxx`）；白名单取「服务端**可能下发**的取值集合（8 项，含 `dispute` 预留与 `refund` 废弃别名）」，**动态扫 CSS 得出、不硬编码个数**，视觉层加预留类不会误报；服务端下发未知 `statusBadge` → 降级 `.dipi-badge--closed` + 显示 `statusText`，**不得渲染出不存在的类**（否则徽章丢失底色、视觉全错）；⚠️ `refund`（已废弃，与 `dispute` 同色）与 `refunding`（橙）**只差 3 个字母但语义相反**，新代码**一律用 `dispute`**
+- [ ] G-89 订单状态徽章**必须同时渲染 `statusText` 文字**（不只渲染颜色块、不只用 `statusTone`）；灰度/色弱模式下仍能区分全部 10 种状态（无障碍检查项 §E.3 A-21）
+- [ ] G-94 `inService` 状态下服务端下发 `allowedActions` 含 `confirm` 时，订单卡显示「确认完成」次按钮（迁移 **T24** 兜底通道），**走与 `pendingConfirm` 完全相同的二次确认弹层**；用户不会因地陪漏点「结束服务」而被卡在「服务中」
 
 ## G.5 地陪详情页 P7（8 条）
 
@@ -1999,7 +2144,7 @@ flowchart TD
 - [ ] G-51 评价「展开全部」就地展开（用已下发数据，**不重新请求**）；评价为空显示「还没有评价」
 - [ ] G-52 收藏调用 `PUT /api/v1/me/favorites/{guideId}`（**幂等 toggle**），图标态**以响应返回的 `favorited` 为准**（前端不自行取反）；失败**回滚图标状态** + Toast；404/下架 → 整页错误态「该地陪已下架，去看看其他地陪」，**不渲染任何地陪字段**
 
-## G.6 下单确认页 P8（11 条）
+## G.6 下单确认页 P8（12 条）
 
 - [ ] G-53 路由为 `/pages/order/create`，**独立 push 页**（不是弹层）；入参 `guideId`（必填）、`serviceId`（可选）、`conversationId`（可选）
 - [ ] G-54 吸底 CTA 为 `position: fixed` + 安全区；**键盘弹起时监听 `keyboardHeight` 上移 CTA**，聚焦输入框自动滚动到可视区中部（F-20）
@@ -2010,6 +2155,7 @@ flowchart TD
 - [ ] G-59 提交成功 → 清 `storage.dipi:draft:order`；支付取消/失败 → **保留全部已填内容** + 提示「支付未完成，订单已保留 15 分钟」
 - [ ] G-60 草稿：表单变更**节流 500ms 落盘** `storage.dipi:draft:order`；二次进入且 `draft.guideId` 一致 → **回填 + 提示「已为你保留上次填写的内容」+「清空」**；guideId 不一致 → 不提示不回填（F-19）
 - [ ] G-61 服务端返回的 `totalAmount` 与本地算价不一致 → 弹层「价格已更新，请确认」+ 展示新旧金额，**不静默改价**；草稿含手机号，只存本地 storage，**不写日志、不上报**
+- [ ] G-95 **时段是地陪级**：`availableSlots[]` **不按服务项筛选**，切换服务项**不改变可选时段集合**；核销键 = **地陪 + slotId**（地陪是真人，同一时段只能陪一个人）；该时段被任一服务项占用后，对**该地陪全部服务项**都 `available:false`；**取消订单会释放时段**；提交返回 `409` + `reason=slot_taken` → 提示「该时段已被预约，请选择其他时段」+ 自动重选首个可约时段且**其余表单保留**
 - [ ] G-79 P8 提交成功后 `storage.dipi:nav:order` **只写一次**（不重复写、不叠加），且在 **`onLoad` 之后立即清除**（消费即删，防止下次进入误跳转）
 - [ ] G-80 P8 的 `idempotencyKey` 在**同一次下单的重试中保持不变**（超时重试、支付失败再提交都复用同一个）；**只有换了订单（换地陪 / 换服务项 / 换时段 / 换人数）才生成新的 key**
 
@@ -2027,7 +2173,7 @@ flowchart TD
 - [ ] G-68 设置开关失败**回滚** UI 状态并 Toast「设置保存失败」
 - [ ] G-69 订阅消息授权流程：先 `wx.getSetting` → `showModal` 说明 → `wx.requestSubscribeMessage` → 按结果设开关
 - [ ] G-70 退出登录 → 清 `store.user` + `storage.dipi:user:*` + `wx.reLaunch('/pages/home/home')` + Toast
-- [ ] G-85 「我的」页 4 格统计（待支付 / **服务中** / 待确认 / 已退款）按**互斥分桶**渲染：每笔订单只落一格，四格之和 ≤ `orderCounts.all`；标签为「服务中」不是「进行中」。（防御性）若服务端返回包含式聚合 → 前端**只显示「服务中」或「待确认」其中一格**，不同时显示两格
+- [ ] G-85 「我的」页 4 格统计（**待支付 / 服务中 / 待确认 / 退款**）按**互斥分桶**渲染：读服务端 `orderStats`（**键名 `pendingPayment`/`ongoing`/`pendingConfirm`/`refunded`**），每笔订单只落一格，四格之和 ≤ 订单总数；标签为「服务中」不是「进行中」、第 4 格标签为「退款」不是「已退款」。（防御性）若服务端返回包含式聚合 → 前端**只显示「服务中」或「待确认」其中一格**，不同时显示两格
 
 ## G.9 响应式与无障碍（8 条）
 
@@ -2090,7 +2236,7 @@ flowchart TD
 | 退款说明超长 | 补充说明最多 200 字 | 计数变 `--dipi-error-700` |
 | 搜索词无效 | 请输入有效的关键词 | 搜索框错误态 |
 | 联系人姓名为空 | 请填写联系人和手机号 | 吸底 CTA 上方 `--dipi-error-700` |
-| 手机号格式错误 | 请填写 11 位手机号 | 输入框下方 |
+| 手机号格式错误 | 请填写 6–20 位数字的联系电话 | 输入框下方 |
 | 人数超出服务上限 | 该服务最多 {n} 人 | 人数步进器下方 |
 | 备注超长 | 补充说明最多 200 字 | 计数变 `--dipi-error-700` |
 | 未选服务项 | 请先选择一个服务 | Toast + 服务项区块高亮 |
@@ -2103,7 +2249,7 @@ flowchart TD
 |---|---|---|
 | 草稿回填提示 | 已为你保留上次填写的内容 | P8 顶部 `.dipi-notice--brand` +「清空」 |
 | 草稿地陪不一致 | 上次填写的内容不属于这位地陪，已为你清除 | P8 顶部 `.dipi-notice--warning`（草稿已丢弃） |
-| 时段被抢占 | 该时段刚被约走，请选择其他时段 | P8 时段区（自动重选首个可约时段，其余表单保留） |
+| 时段被抢占 | 该时段已被预约，请选择其他时段 | P8 时段区（`409` + `reason=slot_taken`；自动重选首个可约时段，其余表单保留） |
 | 地陪休息中 | 该地陪今日休息，可先咨询或看看其他地陪 | P7 吸底条上方 `.dipi-notice--warning` |
 | 无可约时段 | 该地陪近期暂无可约时段，可先咨询 | P7 吸底条上方 + P8 时段区空态 |
 | 地陪已下架 | 该地陪已下架，去看看其他地陪 | P7 整页错误态 |
@@ -2118,5 +2264,7 @@ flowchart TD
 ---
 
 *文档结束 · 本文档为 Phase 2 唯一体验事实源；与 `docs/01-visual-design.md` 冲突时以视觉规范为准；**接口路径、字段命名、分页与信封格式以 `docs/03-api-contract.md` 为准**，两者冲突以 03 为准；接口字段变更需同步更新本文档并通知前端工程。*
-*v1.2 修订（对齐 03 契约）：服务项 ID 统一 `serviceId`；`slotId` 原子核销；收藏幂等 toggle；订单徽章样式由服务端 `statusBadge`/`statusTone` 下发；`orderCounts` 互斥分桶；金额对齐 `unitPriceAmount`/`subtotalAmount`；`serviceType` 规范枚举 camelCase；WS 补客户端→服务端事件与发送确认路径。*
+*v1.6 终稿（徽章色板定稿）：徽章类名采纳最终裁决｜色板仅需新增 1 个 `.dipi-badge--refunding`（零回归）｜`statusKey` 恢复必发（**已于 v1.8 撤销，最终不提供该字段**）｜白名单 8 值。*
+*v1.5 终稿（对齐 03 契约实测 + rex-server 复核 + 团队裁决）：**撤销 `statusKey`**（用 `status`）｜`orderStats` 第 4 桶键名 `refunded`、标签「退款」、字段名 `orderStats`｜**时段核销改「地陪 + slotId」全局唯一**（地陪级 availableSlots）｜服务端按 `(conversationId, clientMessageId)` 幂等｜徽章归并两版待裁决（本文档采用 Phase 1 / 服务端现状）。*
+*v1.4 终稿（对齐 03 契约实测 + rex-server 三问答）：`statusTone` 值域 `ink`｜4 格第 4 桶键名 `refunding`、标签「退款」｜**跨通道去重键改 `clientMessageId`** + 其生命周期规则｜状态机新增 **T24 `inService --确认完成--> completed`** 兜底迁移｜订单金额确认无 `priceAmount`｜`allowedActions` 值域确认。*
 *v1.1 修订（IA 裁决后）：IA-01 由「半屏面板」改为独立二级页（新增 §B.7 地陪详情页 / §B.8 下单确认页），页面总数 6 → 8。*

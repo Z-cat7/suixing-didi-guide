@@ -17,7 +17,9 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const CLIENT_ID = 'Iv23liIip3I7DTZzqlzq'; // GitHub Copilot MCP 应用的 client id
+// GitHub CLI 官方 OAuth App（client id 公开），支持 Device Flow；
+// Copilot MCP 的 client id 未开启 Device Flow，会返回 device_flow_disabled。
+const CLIENT_ID = process.env.GH_OAUTH_CLIENT_ID || '178c6fc778ccc68e1d6a';
 const SCOPE = 'repo read:org gist';
 const GH_CONFIG_DIR = path.join(os.homedir(), '.config', 'gh');
 const HOSTS_PATH = path.join(GH_CONFIG_DIR, 'hosts.yml');

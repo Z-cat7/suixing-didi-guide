@@ -223,6 +223,9 @@ class DipiSocket {
     }
 
     // 消息去重（按 conversationId + seq）
+    // ⚠️ 这只针对**同一通道**的重复推送。跨通道（HTTP 成功回执 vs WS 回推）
+    //    是两条不同消息（messageId / seq 都可能不同），由页面层用
+    //    clientMessageId 统一对账（G-92），此处**不能**按 seq 误杀。
     if (type === 'message.new' && body.message) {
       const cid = body.conversationId || (body.message && body.message.conversationId) || '';
       const seq = body.message.seq;

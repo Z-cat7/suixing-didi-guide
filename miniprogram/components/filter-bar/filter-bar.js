@@ -22,7 +22,7 @@ Component({
     /** 当前排序 */
     sortBy: {
       type: String,
-      value: 'default',
+      value: 'recommend',
     },
     /** 已生效筛选条件数量 */
     activeFilterCount: {

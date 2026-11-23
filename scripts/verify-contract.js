@@ -247,6 +247,55 @@ async function main() {
   }
 
   console.log('');
+  console.log('── 订单：statusBadge / statusTone / allowedActions（v1.8）──');
+  const badgeWhitelist = ['pending', 'ongoing', 'review', 'done', 'closed', 'refunding'];
+  const toneWhitelist = ['warning', 'info', 'brand', 'accent', 'success', 'ink', 'error'];
+  const actionWhitelist = ['pay', 'cancel', 'confirm', 'refund', 'contact', 'review'];
+  o && check('含 statusBadge', typeof o.statusBadge === 'string', 'statusBadge=' + o.statusBadge);
+  o && check('statusBadge 在白名单内', badgeWhitelist.indexOf(o.statusBadge) >= 0, '白名单=' + badgeWhitelist.join('/'));
+  o && check('含 statusTone', typeof o.statusTone === 'string', 'statusTone=' + o.statusTone);
+  o && check('statusTone 在值域内', toneWhitelist.indexOf(o.statusTone) >= 0, '值域=' + toneWhitelist.join('/'));
+  o && check('含 allowedActions[]', Array.isArray(o.allowedActions), JSON.stringify(o.allowedActions));
+  o && check(
+    'allowedActions 取值合法',
+    Array.isArray(o.allowedActions) && o.allowedActions.every(function (a) {
+      return actionWhitelist.indexOf(a) >= 0;
+    })
+  );
+  o && check(
+    'allowedActions 与 6 个布尔位同源',
+    Array.isArray(o.allowedActions) &&
+      o.allowedActions.length ===
+        ['canUserPay', 'canUserCancel', 'canUserConfirm', 'canUserRefund', 'canUserContact', 'canUserReview']
+          .filter(function (k) { return o[k]; }).length
+  );
+  o && check('订单含 unitPriceAmount / subtotalAmount', typeof o.unitPriceAmount === 'number' && typeof o.subtotalAmount === 'number');
+  o && check('订单无裸 priceAmount（G-91）', !('priceAmount' in o));
+  o && check('无 statusKey / statusCode（v1.8 已删除）', !('statusKey' in o) && !('statusCode' in o));
+
+  console.log('');
+  console.log('── 订单 Tab 的 status 查询参数（必须是状态枚举，否则 422）──');
+  const tabChecks = [
+    ['ongoing → accepted,inService', 'accepted,inService'],
+    ['refunding → refunding,refunded', 'refunding,refunded'],
+    ['pendingPayment → pendingPayment', 'pendingPayment'],
+  ];
+  for (const tc of tabChecks) {
+    const r = await get(PORT, '/api/v1/orders?status=' + encodeURIComponent(tc[1]) + '&page=1&pageSize=50', H);
+    check(
+      tc[0] + ' → 服务端接受（200）',
+      r.code === 0,
+      '命中 ' + ((r.data && r.data.list) || []).length + ' 条'
+    );
+  }
+  const badStatus = await get(PORT, '/api/v1/orders?status=ongoing&page=1&pageSize=5', H);
+  check(
+    '展示分桶名直接当 status 会被服务端拒绝（422）→ 客户端必须走 statusQuery 映射',
+    badStatus.code !== 0,
+    'code=' + badStatus.code
+  );
+
+  console.log('');
   console.log('── 收藏 toggle（PUT，前端不自行取反）──');
   const fav = await new Promise(function (resolve, reject) {
     const s = JSON.stringify({});

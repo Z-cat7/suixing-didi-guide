@@ -237,6 +237,41 @@ dipi/
 | P7 详情 | `onLoad` 拉取；收藏 toggle 后乐观更新，失败回滚 |
 | P8 下单 | `onShow` **只重拉 `availableSlots`，绝不重置已填表单** |
 
+### 4.7 订单徽章：状态 → 样式由服务端下发
+
+服务端在订单列表项与详情中同时下发四个字段，**前端不维护任何「状态 → 样式 / 操作」映射表**：
+
+| 字段 | 角色 | 取值 |
+|---|---|---|
+| `status` | 语义身份 | 10 个 camelCase 状态值，与状态枚举 1:1 |
+| `statusText` | 用户文案 | 待支付 / 待接单 / 已接单 / 服务中 / 待确认 / 已完成 / 已取消 / 已关闭 / 退款中 / 已退款 |
+| `statusBadge` | 样式决策 | 8 个类名后缀，必须对应 `components.wxss` 已定义的 `.dipi-badge--*` |
+| `allowedActions[]` | 可用操作 | `pay` / `cancel` / `confirm` / `refund` / `contact` / `review` |
+
+`status → statusBadge` 映射表在**服务端内部**（`server/src/models/statusMap.js` 的 `STATUS_BADGE`），客户端不感知。
+
+**徽章按「视觉紧迫度」分 6 级**（而非按业务状态逐个配色），依据是**用户需不需要立刻做动作**：
+
+| 紧迫度 | 状态 | 类 | 色 |
+|---|---|---|---|
+| ① 还没确认，有时限 | 待支付 / 待接单 | `pending` | warning |
+| ② 已确认，等开始 | 已接单 | `ongoing` | brand |
+| ③ 正在进行 | 服务中 | `ongoing` | brand |
+| ④ 等你行动 / 关注 | 待确认 | `review` | accent |
+| ④ 等你行动 / 关注 | 退款中 | `refunding` | accent |
+| ⑤ 顺利完成 | 已完成 | `done` | success |
+| ⑥ 已结束 | 已取消 / 已关闭 / 已退款 | `closed` | ink |
+| ⚠️ 异常 | 纠纷 / 异常 | `dispute` | error |
+
+**三条视觉纪律**：
+- **红色只留给纠纷/异常**。「退款中」是橙，「已退款」是中性灰（它是已完成的好结果，用红会让人误以为出了问题）
+- **`confirmed`（蓝）不用于任何订单状态**，仅供非订单类信息徽章（系统通知 / 处理中 / 平台介入中）
+- **`statusText` 必须与徽章同时渲染** —— 不能只靠颜色区分状态（色弱 / 单色模式可读性）
+
+**防漂移机制**：客户端 `scripts/check-miniprogram.js` 的 C11 规则做**双向断言** —— CSS 有而白名单没有、或白名单有而 CSS 没有，都报错。这保证「服务端下发的 `statusBadge` 永远能在样式层找到对应类」。
+
+### 4.8 页面间传参
+
 ### 4.7 页面间传参
 
 统一用 URL query（`utils/constants.js` 的 `ROUTES` 集中定义）：

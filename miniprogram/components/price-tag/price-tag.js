@@ -28,6 +28,14 @@ Component({
       type: String,
       value: '',
     },
+    /**
+     * 价格单位文案（服务端下发的 priceUnitText，如「小时」「次」）
+     * 传了就直接用，不再由前端拼装；不传则回退到 unit 枚举映射
+     */
+    unitText: {
+      type: String,
+      value: '',
+    },
     /** 尺寸：sm（默认）/ lg */
     size: {
       type: String,
@@ -47,11 +55,12 @@ Component({
   },
 
   observers: {
-    'amount, originAmount, unit': function (amount, originAmount, unit) {
+    'amount, originAmount, unit, unitText': function (amount, originAmount, unit, unitText) {
       this.setData({
         yuan: format.amountToYuan(amount),
         originYuan: originAmount ? format.amountToYuan(originAmount) : '',
-        unitText: PRICE_UNIT_TEXT[unit] || '',
+        // 单位文案优先用服务端下发的 priceUnitText，前端不自行拼装
+        unitText: unitText || PRICE_UNIT_TEXT[unit] || '',
       });
     },
   },

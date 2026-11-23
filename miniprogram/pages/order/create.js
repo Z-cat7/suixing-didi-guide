@@ -61,16 +61,20 @@ Page({
     /** 备注 */
     remark: '',
 
-    /** 金额（整数分） */
-    priceAmount: 0,
+    /** 金额（整数分）：unitPriceAmount 单价 / subtotalAmount 小计 / totalAmount 总额 */
+    unitPriceAmount: 0,
+    subtotalAmount: 0,
     extraAmount: 0,
     discountAmount: 0,
     totalAmount: 0,
     /** 金额展示（元） */
-    priceYuan: '0',
+    unitPriceYuan: '0',
+    subtotalYuan: '0',
     extraYuan: '0',
     discountYuan: '0',
     totalYuan: '0',
+    /** 人数下限（来自服务项 minTravelers） */
+    minTravelers: 1,
 
     /** 草稿回填提示 */
     draftRestored: false,
@@ -272,20 +276,25 @@ Page({
   recalcPrice: function () {
     const service = this.data.selectedService;
     const travelers = this.data.travelers || 1;
-    const unitAmount = service && service.priceAmount ? service.priceAmount : 0;
-    const priceAmount = unitAmount * travelers;
+    // 服务项的 priceAmount 是**单价**（分）；小计 = 单价 × 人数
+    const unitPriceAmount = service && service.priceAmount ? service.priceAmount : 0;
+    const subtotalAmount = unitPriceAmount * travelers;
     const extraAmount = this.data.extraAmount || 0;
     const discountAmount = this.data.discountAmount || 0;
-    const totalAmount = Math.max(0, priceAmount + extraAmount - discountAmount);
+    const totalAmount = Math.max(0, subtotalAmount + extraAmount - discountAmount);
     this.setData({
-      priceAmount: priceAmount,
+      unitPriceAmount: unitPriceAmount,
+      subtotalAmount: subtotalAmount,
       extraAmount: extraAmount,
       discountAmount: discountAmount,
       totalAmount: totalAmount,
-      priceYuan: format.amountToYuan(priceAmount),
+      unitPriceYuan: format.amountToYuan(unitPriceAmount),
+      subtotalYuan: format.amountToYuan(subtotalAmount),
       extraYuan: format.amountToYuan(extraAmount),
       discountYuan: format.amountToYuan(discountAmount),
       totalYuan: format.amountToYuan(totalAmount),
+      // 人数上下限取自服务项的 minTravelers / maxTravelers
+      minTravelers: service && service.minTravelers ? service.minTravelers : 1,
       maxTravelers: service && service.maxTravelers ? service.maxTravelers : 20,
     });
   },
@@ -333,7 +342,7 @@ Page({
    * 人数减
    */
   onTravelersMinus: function () {
-    const travelers = Math.max(1, this.data.travelers - 1);
+    const travelers = Math.max(this.data.minTravelers || 1, this.data.travelers - 1);
     this.setData({ travelers: travelers, travelersError: '' });
     this.recalcPrice();
     this.updateSubmitState();
@@ -490,8 +499,10 @@ Page({
       contactError = '请填写 11 位手机号';
       ok = false;
     }
-    if (this.data.travelers < 1 || this.data.travelers > (this.data.maxTravelers || 20)) {
-      travelersError = '人数需为 1–20 之间的整数';
+    const minT = this.data.minTravelers || 1;
+    const maxT = this.data.maxTravelers || 20;
+    if (this.data.travelers < minT || this.data.travelers > maxT) {
+      travelersError = '人数需为 ' + minT + '–' + maxT + ' 之间的整数';
       ok = false;
     }
     this.setData({ contactError: contactError, travelersError: travelersError });

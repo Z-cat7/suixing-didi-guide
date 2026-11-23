@@ -513,6 +513,126 @@ function checkAccessibility(wxmlPath) {
 }
 
 /* ==========================================================================
+ * C11 —— 徽章白名单防漂移校验（G-83）
+ * ---------------------------------------------------------------------------
+ * 服务端下发的 `statusBadge` 必须永远能在样式层找到对应类，否则徽章会「掉样式」。
+ *
+ * 【白名单来源】按 UX 规范 v1.8：**动态扫 components.wxss** 取全部
+ *   `.dipi-badge--*`（排除修饰类 sm / solid），**不硬编码** ——
+ *   视觉层新增类时硬编码白名单会让本检查假红。
+ *
+ * 校验的**不变量**（两条，合起来 = 客户端白名单 ≡ CSS 实际类名集合）：
+ *   ① 动态扫出的**每一个**样式类都必须被客户端白名单覆盖
+ *      —— 否则服务端若下发该值，客户端会降级（掉样式）
+ *   ② 客户端白名单里的**每一个**值都必须在 CSS 里有对应类
+ *      —— 否则客户端会拼出不存在的类（徽章丢失底色）
+ *
+ * 客户端白名单 = ORDER_STATUS_BADGE_WHITELIST（服务端会下发的值）
+ *              + ORDER_STATUS_BADGE_ALIASES（样式层预留的非订单语义徽章）
+ * ========================================================================== */
+
+/** 尺寸/变体类（不是 statusBadge 取值） */
+const BADGE_VARIANTS = ['sm', 'solid'];
+
+/**
+ * 动态扫描 components.wxss，取全部 .dipi-badge--* 类名后缀
+ * @returns {array|null} 类名后缀数组；文件不存在返回 null
+ */
+function scanBadgeClasses() {
+  const componentsPath = path.join(MP_ROOT, 'styles', 'components.wxss');
+  if (!fs.existsSync(componentsPath)) return null;
+  const content = fs.readFileSync(componentsPath, 'utf8');
+  const re = /\.dipi-badge--([a-zA-Z0-9_-]+)/g;
+  const found = {};
+  let m;
+  while ((m = re.exec(content)) !== null) {
+    found[m[1]] = true;
+  }
+  return Object.keys(found)
+    .filter(function (c) {
+      return BADGE_VARIANTS.indexOf(c) < 0;
+    })
+    .sort();
+}
+
+/** 从客户端常量文件读白名单（单一事实源，不在本脚本里重复维护） */
+function readBadgeContract() {
+  const constantsPath = path.join(MP_ROOT, 'utils', 'constants.js');
+  if (!fs.existsSync(constantsPath)) return null;
+  const content = fs.readFileSync(constantsPath, 'utf8');
+
+  /**
+   * 从常量文件里解析一个字符串数组
+   * @param {string} name 常量名
+   * @returns {array|null}
+   */
+  function pick(name) {
+    const re = new RegExp('const\\s+' + name + '\\s*=\\s*\\[([^\\]]*)\\]');
+    const m = content.match(re);
+    if (!m) return null;
+    return (m[1].match(/'([^']+)'/g) || []).map(function (s) {
+      return s.slice(1, -1);
+    });
+  }
+
+  const whitelist = pick('ORDER_STATUS_BADGE_WHITELIST');
+  const aliases = pick('ORDER_STATUS_BADGE_ALIASES');
+  if (!whitelist || !aliases) return null;
+  return { whitelist: whitelist, aliases: aliases };
+}
+
+/**
+ * 校验徽章类名集合与契约一致
+ */
+function checkBadgeWhitelist() {
+  const styleClasses = scanBadgeClasses();
+  if (!styleClasses) {
+    addError('styles/components.wss', '文件不存在，无法校验徽章白名单', 'C11');
+    return;
+  }
+
+  const contract = readBadgeContract();
+  if (!contract) {
+    addError('utils/constants.js', '缺少 ORDER_STATUS_BADGE_WHITELIST / ORDER_STATUS_BADGE_ALIASES 定义', 'C11');
+    return;
+  }
+
+  // 客户端白名单 = 服务端下发值 + 非订单语义别名
+  const clientSet = contract.whitelist.concat(contract.aliases);
+  const clientMissing = clientSet.filter(function (c) {
+    return styleClasses.indexOf(c) < 0;
+  });
+  const cssUnknown = styleClasses.filter(function (c) {
+    return clientSet.indexOf(c) < 0;
+  });
+
+  if (clientMissing.length) {
+    addError(
+      'styles/components.wxss',
+      '客户端白名单里的值在样式层没有对应类：' + clientMissing.map(function (c) {
+        return '.dipi-badge--' + c;
+      }).join('、') + '（客户端会拼出不存在的类 → 徽章丢底色）',
+      'C11'
+    );
+  }
+  if (cssUnknown.length) {
+    addError(
+      'styles/components.wxss',
+      '样式层存在客户端白名单未覆盖的类：' + cssUnknown.map(function (c) {
+        return '.dipi-badge--' + c;
+      }).join('、') + '（服务端若下发该值，客户端会降级 → 徽章掉样式；请同步 utils/constants.js 的白名单）',
+      'C11'
+    );
+  }
+  if (!clientMissing.length && !cssUnknown.length) {
+    info.push(
+      '徽章白名单校验通过：动态扫得 ' + styleClasses.length + ' 个样式类（' +
+      styleClasses.join('/') + '），与客户端白名单完全一致'
+    );
+  }
+}
+
+/* ==========================================================================
  * 主流程
  * ========================================================================== */
 function main() {
@@ -561,6 +681,9 @@ function main() {
 
   // C5
   jsFiles.forEach(checkRequestUsage);
+
+  // C11 徽章白名单防漂移
+  checkBadgeWhitelist();
 
   /* ---------------- 输出 ---------------- */
   console.log('');

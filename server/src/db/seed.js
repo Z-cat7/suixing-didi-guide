@@ -577,6 +577,7 @@ async function seed(opts = {}) {
     status: g.status,
     location: g.location,
     favoritesCount: 0,
+    bookedSlots: [],          // 地陪级时段占用（同一时段该地陪只能陪一个人）
     availableSlots: slots,
     createdAt: daysAgo(360 - idx * 5),
     updatedAt: daysAgo(idx + 1),
@@ -601,7 +602,6 @@ async function seed(opts = {}) {
     includes: s.includes,
     icon: s.icon,
     slots,
-    bookedSlots: [],
     createdAt: daysAgo(300),
   }));
   store.read('serviceItems').length = 0;
@@ -771,7 +771,19 @@ async function seed(opts = {}) {
   });
   store.read('orders').length = 0;
   store.insertMany('orders', orders);
-  log(`[seed] 订单 ${orders.length} 单（覆盖 ${new Set(orders.map((o) => o.status)).size} 种状态）`);
+
+  // 地陪级时段核销：把「未来日期」订单已占用的时段登记到地陪的 bookedSlots
+  const todayStr = dayOffset(0);
+  for (const o of orders) {
+    if (o.date < todayStr) continue;              // 过去的订单不再占用未来时段
+    const guide = guides.find((g) => g.id === o.guideId);
+    if (!guide) continue;
+    if (!guide.bookedSlots.includes(o.slotId)) guide.bookedSlots.push(o.slotId);
+  }
+  store.markDirty('guides');
+  const bookedCount = guides.reduce((n, g) => n + g.bookedSlots.length, 0);
+  log(`[seed] 订单 ${orders.length} 单（覆盖 ${new Set(orders.map((o) => o.status)).size} 种状态）`
+    + ` · 地陪级已占用时段 ${bookedCount} 个`);
 
   /* ---- 通知 ---- */
   const notices = NOTICE_SEEDS.map((n, idx) => ({

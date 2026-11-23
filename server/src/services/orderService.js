@@ -111,27 +111,49 @@ function findByIdempotencyKey(userId, idempotencyKey) {
 }
 
 /**
+ * 收集某地陪的全部可约时段（其所有服务项的时段并集）
+ * @param {string} guideId
+ * @returns {object[]} [{ slotId, date, timeSlot, available }]
+ */
+function collectGuideSlots(guideId) {
+  const map = new Map();
+  for (const s of store.read('serviceItems')) {
+    if (s.guideId !== guideId) continue;
+    for (const slot of s.slots || []) {
+      if (!map.has(slot.slotId)) map.set(slot.slotId, slot);
+    }
+  }
+  return Array.from(map.values()).sort(
+    (a, b) => (a.date === b.date ? a.slotId.localeCompare(b.slotId) : a.date.localeCompare(b.date))
+  );
+}
+
+/**
  * 校验并预约时段（原子核销）
  * ---------------------------------------------------------------------------
- * 校验通过即核销：把 slotId 写入服务项的 bookedSlots。
+ * 核销维度：**地陪 + slotId**（不是「服务项 + slotId」）。
+ * 理由：地陪是一个真人，同一天同一时段只能陪一个人——
+ *       约了「美食陪逛」就同时约不了「城市漫游」。
+ * 因此占用记录放在 guide.bookedSlots（地陪级），与地陪的所有服务项共享。
+ *
+ * 校验通过即核销：把 slotId 写入 guide.bookedSlots。
  * 已被占用 → 409，message 可直接展示给用户。
  *
  * @param {object} guide 地陪
- * @param {object} serviceItem 服务项
  * @param {string} slotId
- * @param {object[]} slots 全量时段
  * @returns {object} { slotId, date, timeSlot }
  */
-function reserveSlot(guide, serviceItem, slotId, slots) {
-  const slot = (slots || []).find((s) => s.slotId === slotId);
+function reserveSlot(guide, slotId) {
+  const slots = collectGuideSlots(guide.id);
+  const slot = slots.find((s) => s.slotId === slotId);
   if (!slot) {
-    throw conflict('该时段不可预约，请选择其他时段', {
+    throw conflict('该时段暂不可约，请选择其他时段', {
       slotId,
       reason: 'slot_not_found',
       message: '该时段暂不可约，请选择其他时段',
     });
   }
-  const booked = Array.isArray(serviceItem.bookedSlots) ? serviceItem.bookedSlots : [];
+  const booked = Array.isArray(guide.bookedSlots) ? guide.bookedSlots : [];
   if (booked.includes(slotId)) {
     throw conflict('该时段已被预约，请选择其他时段', {
       slotId,
@@ -139,25 +161,25 @@ function reserveSlot(guide, serviceItem, slotId, slots) {
       message: '该时段已被预约，请选择其他时段',
     });
   }
-  // 核销
-  serviceItem.bookedSlots = [...booked, slotId];
-  store.markDirty('serviceItems');
+  // 核销（地陪级）
+  guide.bookedSlots = [...booked, slotId];
+  store.markDirty('guides');
   return slot;
 }
 
 /**
- * 释放已预约时段（订单取消/退款关闭时）
- * @param {string} serviceId
+ * 释放已预约时段（订单取消/关闭时）
+ * @param {string} guideId
  * @param {string} slotId
  */
-function releaseSlot(serviceId, slotId) {
-  if (!serviceId || !slotId) return;
-  const item = store.read('serviceItems').find((s) => s.id === serviceId);
-  if (!item) return;
-  const booked = Array.isArray(item.bookedSlots) ? item.bookedSlots : [];
+function releaseSlot(guideId, slotId) {
+  if (!guideId || !slotId) return;
+  const guide = store.findById('guides', guideId);
+  if (!guide) return;
+  const booked = Array.isArray(guide.bookedSlots) ? guide.bookedSlots : [];
   if (!booked.includes(slotId)) return;
-  item.bookedSlots = booked.filter((x) => x !== slotId);
-  store.markDirty('serviceItems');
+  guide.bookedSlots = booked.filter((x) => x !== slotId);
+  store.markDirty('guides');
 }
 
 /**
@@ -186,7 +208,7 @@ function createOrder(userId, payload) {
   }
 
   // 原子核销时段（不可用 → 409）
-  const slot = reserveSlot(guide, serviceItem, payload.slotId, serviceItem.slots);
+  const slot = reserveSlot(guide, payload.slotId);
 
   // 价格全部由服务端计算，前端传入的 price / totalAmount 一律忽略
   const price = calcPrice(serviceItem, travelers, { isFirstOrder: isFirstOrder(userId) });
@@ -335,9 +357,9 @@ function applyTransition(order, action, patch = {}) {
   if (action === 'refund:approve') { extra.refundedAt = now; extra.refundStatus = 'success'; }
   if (action === 'refund:reject') extra.refundStatus = 'rejected';
 
-  // 取消/关闭时释放时段
+  // 取消/关闭时释放时段（地陪级）
   if (action === 'cancel' || action === 'close') {
-    releaseSlot(order.serviceId, order.slotId);
+    releaseSlot(order.guideId, order.slotId);
   }
 
   // 时间轴追加一条
@@ -416,26 +438,38 @@ function countByStatus(userId) {
 /**
  * 「我的」页四格统计（服务端聚合，前端只渲染）
  * ---------------------------------------------------------------------------
- * ⚠️ `ongoing` 是**服务端聚合出的展示分桶**，不是订单状态枚举。
+ * ⚠️ 四格是**服务端聚合出的展示分桶**，不是订单状态枚举。
  *
- * 四格互斥：每笔订单有且仅落入一格，四格之和 ≤ orderCounts.all。
- *   pendingPayment ← pendingPayment
- *   ongoing        ← accepted + inService        （标签「服务中」）
- *   pendingConfirm ← pendingConfirm
- *   refunding      ← refunding + refunded        （标签「已退款」）
+ * **硬约束：每笔订单有且仅落入一格**（else-if 链保证），四格之和 ≤ orderCounts.all。
+ *   pendingPayment ← pendingPayment          待支付
+ *   ongoing        ← accepted + inService    服务中   （不含 pendingConfirm）
+ *   pendingConfirm ← pendingConfirm          待确认
+ *   refunded       ← refunding + refunded    退款
  *
  * 不纳入四格：pendingAccept / cancelled / closed / completed
  * （不是需要用户处理的待办）。
  * @param {string} userId
  */
 function orderStats(userId) {
-  const counts = countByStatus(userId);
-  return {
-    pendingPayment: counts.pendingPayment,
-    ongoing: counts.accepted + counts.inService,
-    pendingConfirm: counts.pendingConfirm,
-    refunding: counts.refunding + counts.refunded,
-  };
+  const orders = store.read('orders').filter((o) => o.userId === userId);
+  const stats = { pendingPayment: 0, ongoing: 0, pendingConfirm: 0, refunded: 0 };
+
+  for (const o of orders) {
+    const s = o.status;
+    // else-if 链：保证一笔订单只落一格
+    if (s === pendingPayment) {
+      stats.pendingPayment += 1;
+    } else if (s === accepted || s === inService) {
+      stats.ongoing += 1;
+    } else if (s === pendingConfirm) {
+      stats.pendingConfirm += 1;
+    } else if (s === refunding || s === refunded) {
+      stats.refunded += 1;
+    }
+    // else: pendingAccept / cancelled / closed / completed → 不纳入四格
+  }
+
+  return stats;
 }
 
 /**
@@ -549,6 +583,7 @@ module.exports = {
   findByIdempotencyKey,
   reserveSlot,
   releaseSlot,
+  collectGuideSlots,
   createOrder,
   assertOwnership,
   applyTransition,

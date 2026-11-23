@@ -15,6 +15,7 @@
 2. **路径前缀只有 `/api/v1`**。不存在 `/api/xxx` 裸路径，也不存在第二套别名。
 3. **字段全链路 camelCase**，只有一种写法：`guideId` `serviceId` `orderId` `conversationId` `slotId` `unreadCount` `createdAt`…… 没有 snake_case 版本。
 4. **金额一律整数分**，字段名以 `Amount` 结尾：`priceAmount` `unitPriceAmount` `subtotalAmount` `discountAmount` `totalAmount` `refundAmount` `extraAmount`。客户端按 `分 ÷ 100` 格式化。
+   > ⚠️ **单位不一致，务必分清**：**查询参数** `minPrice` / `maxPrice` 单位是 **元**（符合人类输入）；**响应体** `xxxAmount` 单位是 **分**。筛选值来自 `filter-options.priceRange`（该处 `min`/`max` 已是元），**提交时不要再乘 100**。
 5. **时间一律 ISO8601 带时区**：`2026-11-23T14:30:00+08:00`。
 6. **枚举值小驼峰**：订单状态 `pendingPayment` / `pendingAccept` / `accepted` / `inService` / `pendingConfirm` / `completed` / `cancelled` / `closed` / `refunding` / `refunded`；服务类型 `foodTour` / `cityWalk` / `sightseeing` / `photo` / `parentChild` / `errand`。
 7. **订单状态→操作映射由服务端下发**。每个订单对象都含 `status` `statusText` `canUserPay` `canUserCancel` `canUserConfirm` `canUserRefund` `canUserContact` `canUserReview`。**前端只渲染，不自算状态、不做兼容判断。**
@@ -102,7 +103,12 @@ payload = {
 }
 ```
 
-- 密钥：`TOKEN_SECRET` 环境变量，默认随机生成（**重启后旧 token 失效，生产必须固定**）。
+> 🔴 **生产部署必须用环境变量固定 `TOKEN_SECRET`**
+> 默认值是**进程启动时随机生成**的 32 字节密钥 —— 服务一重启，所有已签发的 token 立即全部失效，用户被强制登出。
+> 生产环境**必须**通过环境变量注入一个固定的高强度密钥，例如：
+> ```
+> TOKEN_SECRET=<32 字节以上随机串> npm start
+> ```
 - 有效期：`TOKEN_TTL_SECONDS`，默认 `604800`（7 天）。
 - 校验失败分三种码：`40100`（缺 token）/ `40101`（签名错）/ `40102`（过期）。
 
@@ -161,7 +167,7 @@ payload = {
 
 **合计 33 个 HTTP 接口 + 1 个 WebSocket 端点。**
 
-### 3.1 地陪侧动作（演示完整状态流转用；生产由地陪端或后台调用）
+### 3.1 地陪侧动作 / 系统动作（演示完整状态流转用；生产由地陪端、后台或调度器调用）
 
 | 方法 | 路径 | 成功后状态 |
 |---|---|---|
@@ -173,6 +179,13 @@ payload = {
 | POST | `/api/v1/orders/:orderId/refund/reject` | `refunding → refundFromStatus` |
 
 鉴权：token 必须是**该订单对应地陪**的账号（`role === 'guide'` 且 `guideId` 匹配），否则 `40302`。
+
+> **`POST /api/v1/orders/:orderId/close` 也用于超时流转**
+> ⚠️ **服务端当前未内置定时任务**。以下两条超时流转需由**外部调度器**（cron / 定时任务）主动调用本端点：
+> - `pendingPayment` 超过 `expireAt`（创建 +15 分钟）→ `closed`
+> - `pendingAccept` 超过 2 小时未接单 → `closed`
+>
+> 调度器需要以地陪身份调用（或在服务端补一个内部调度任务）。文案示例：「订单已超时关闭」。
 
 ### 3.2 已废弃（不要实现 / 不要调用）
 
@@ -298,7 +311,12 @@ payload = {
 | `page` | int | 否 | 1 | 页码 |
 | `pageSize` | int | 否 | 10 | 每页条数，上限 50 |
 
-**筛选语义**：按 `priceAmount`（起步价）判定，`minPrice ≤ priceAmount ≤ maxPrice` 才命中（入参单位是元，出参单位是分）。
+**筛选语义**：按 `priceAmount`（起步价）判定，`minPrice ≤ priceAmount ≤ maxPrice` 才命中（**入参单位是元，出参单位是分**）。
+
+> **关于 `serviceType` 入参的宽松兼容**
+> 规范形式是 **camelCase**：`foodTour` `cityWalk` `sightseeing` `photo` `parentChild` `errand`。
+> 服务端**额外兼容**历史别名（`food` / `food_tour` 等）——这是**服务端单侧容错，不是契约的一部分**。
+> **客户端只应发送 camelCase，不得依赖别名**，也不要在自己文档里写别名。响应永远只回 camelCase。
 **排序语义**：
 - `recommend`：评分 60% + 订单量 20% + 评价数 10% + 认证 5% + 活跃 5%
 - `priceAsc` / `priceDesc`：按起步价，同价按评分降序
@@ -341,6 +359,11 @@ payload = {
 ### 4.4 地陪详情（P7 地陪详情页 / P8 下单确认页共用）
 
 #### GET `/api/v1/guides/:guideId`
+
+> ⚠️ **结构约定（不要留两种理解）**
+> - **详情接口**返回 `data.guide` **包裹**结构 → 取服务项用 `data.guide.services`
+> - **列表接口**返回 `data.list[]`，**不包裹** → 每项就是地陪对象本身
+> - 详情之所以包裹：它是一个复合对象（含 services / availableSlots / reviews / reviewSummary），嵌套比平铺更清晰
 
 **响应 `data`**
 
@@ -597,7 +620,7 @@ payload = {
 |---|---|---|---|---|
 | `content` | string | 是 | — | 消息内容，≤1000 字 |
 | `messageType` | string | 否 | `text` | `text`\|`image`\|`orderCard`\|`system` |
-| `clientMessageId` | string | 否 | — | 客户端幂等键 |
+| `clientMessageId` | string | 否 | — | 客户端幂等键；同会话内重复提交返回**同一条消息**（见 §5.5） |
 
 **响应 `data`**：落库后的消息对象（同上 `list[]` 元素）。
 
@@ -838,11 +861,11 @@ payload = {
   "serviceType": "foodTour", "serviceIcon": "food",
   "city": "成都",
 
-  // —— 状态：服务端下发，前端只渲染不算 ——
-  "status": "pendingAccept",
-  "statusText": "待接单",
-  "statusBadge": "confirmed",      // 对应 .dipi-badge--confirmed
-  "statusTone": "info",            // 对应 tokens.wxss 功能色
+  // —— 状态：服务端下发，前端只渲染不算（4 个维度，各司其职）——
+  "status": "pendingAccept",       // ① 语义身份（权威）：逻辑判断 / 埋点 / 读屏补充
+  "statusText": "待接单",            // ② 中文文案（徽章必须同时渲染文字，不能只有色块）
+  "statusBadge": "pending",        // ③ 样式决策：CSS 类名后缀 → class="dipi-badge--pending"
+  "statusTone": "warning",         // ④ 功能色语义：色弱/单色模式的第二重信息
   "canUserPay": false,
   "canUserCancel": true,
   "canUserConfirm": false,
@@ -932,7 +955,7 @@ payload = {
     "pendingPayment": 1,   // 待支付  ← pendingPayment
     "ongoing": 2,          // 服务中  ← accepted + inService
     "pendingConfirm": 1,   // 待确认  ← pendingConfirm
-    "refunding": 2         // 已退款  ← refunding + refunded
+    "refunded": 2          // 退款    ← refunding + refunded
   },
   "settings": { /* 见 §4.13 */ },
   "createdAt": "2026-07-26T05:18:43+08:00"
@@ -942,15 +965,18 @@ payload = {
 > ⚠️ **`orderStats` 的四个值是服务端聚合出的「展示分桶」，不是订单状态枚举。**
 >
 > **四格互斥：每笔订单有且仅落入一格，四格之和 ≤ `orderCounts.all`。**
+> 服务端用 **else-if 链**逐单归类，从实现上保证一笔订单不会被计入两格。
 >
 > | 键 | 聚合来源 | 展示标签 |
 > |---|---|---|
 > | `pendingPayment` | `pendingPayment` | 待支付 |
 > | `ongoing` | `accepted` + `inService` | **服务中** |
 > | `pendingConfirm` | `pendingConfirm` | 待确认 |
-> | `refunding` | `refunding` + `refunded` | 已退款 |
+> | `refunded` | `refunding` + `refunded` | 退款 |
 >
 > 不纳入四格：`pendingAccept` / `cancelled` / `closed` / `completed`（不是需要用户处理的待办）。
+> 第 4 格键名是 **`refunded`**（不是 `refunding`）—— 该格同时装「退款中 + 已退款」，
+> 用 `refunding` 会让人误以为只统计「退款中」。
 > 四格统计由服务端算好，前端只渲染，不自算状态。
 
 ---
@@ -1087,7 +1113,30 @@ ws://<host>/ws?token=<token>
 
 > **发送成功的确认**：服务端 `message.send` 成功后，会把该消息以 **`message.new`** 回推给发送者自己的连接，`message.clientMessageId` 与请求里的一致。客户端据此把本地 `sending` 气泡置为 `sent`（**没有独立的 ack 事件**）。
 
-### 5.5 消息 seq 与断线补拉
+### 5.5 消息幂等（服务端保证）
+
+**服务端按 `(conversationId, clientMessageId)` 去重** —— HTTP 与 WS 两条入口共用同一个
+`createMessage()`，命中已存在的 `clientMessageId` 时**返回既有消息**（同一个 `messageId` / `seq`），不新建。
+
+**为什么幂等必须在服务端**：客户端去重覆盖不了「HTTP 请求已在服务端成功落库、但响应在网络上丢失、
+客户端超时重发」这条路径 —— 客户端此时根本不知道服务端已成功，**只有服务端记得**。
+
+**`clientMessageId` 生命周期（客户端负责）**
+
+| 场景 | `clientMessageId` |
+|---|---|
+| 用户主动发起一次新发送 | **新生成**一个 |
+| 同一次发送的失败重发（感叹号重发 / 超时重试） | **复用同一个** |
+| 用户再次主动发送同样内容 | 视为新消息，**新生成**一个 |
+
+→ 因此「同 `clientMessageId` 被静默去重」只发生在**同一次发送的重试**上，这正是要的幂等语义；
+用户重新发同样的内容会带新 key，**不会被吞**。
+
+**跨通道去重**：HTTP 与 WS 可能为同一条逻辑消息各落一条（两条是服务端独立路径）。
+客户端按 **`clientMessageId`** 去重（它是客户端生成的、跨通道天然一致），
+**不要按 `messageId` 去重** —— 跨通道场景下 `messageId` 与 `seq` 都不同。
+
+### 5.6 消息 seq 与断线补拉
 
 - 每条消息带 `seq`：**会话内单调递增**的整数。客户端按 `seq` 排序与去重。
 - 断线重连后用 `lastSeq` 游标补拉：
@@ -1098,7 +1147,7 @@ GET /api/v1/conversations/{conversationId}/messages?since={lastSeq}
 
 返回 `seq > lastSeq` 的消息（按时间正序）。
 
-### 5.6 断线重连策略（客户端责任）
+### 5.7 断线重连策略（客户端责任）
 
 1. **重连退避**：1s → 2s → 4s → 8s → 16s → 30s（上限），每次带 ±20% 随机抖动，最多重试 8 次后转「离线态」。
 2. **重连成功后按序补拉**：
@@ -1297,10 +1346,10 @@ GET /api/v1/conversations/{conversationId}/messages?since={lastSeq}
 | `contactPhone` | string | 是 | 联系电话 | `13800000001` |
 | `conversationId` | string | 否 | 来源会话 | `cv_000001` |
 | `idempotencyKey` | string | 否 | 幂等键 | `b7f3-4c21` |
-| `status` | enum | 是 | 见 §8 状态机 | `pendingAccept` |
+| `status` | enum | 是 | 语义身份（权威，永不漂移），见 §8 状态机 | `pendingAccept` |
 | `statusText` | string | 是 | 状态中文文案 | `待接单` |
-| `statusBadge` | string | 是 | 徽章类 | `confirmed` |
-| `statusTone` | string | 是 | 功能色语义 | `info` |
+| `statusBadge` | string | 是 | 徽章类（CSS 类名后缀，见 §8.1 白名单） | `pending` |
+| `statusTone` | string | 是 | 功能色语义（与徽章底色同色系） | `warning` |
 | `canUserPay` … `canUserReview` | boolean | 是 | 状态→操作映射（6 个） | `false` |
 | `allowedActions` | string[] | 是 | **用户**可执行动作列表，与 6 个 `canUserXxx` 同源生成；值域固定 `pay`/`cancel`/`confirm`/`refund`/`contact`/`review`（**不含**地陪侧动作） | `["cancel","refund","contact"]` |
 | `cancelReason` | string | 否 | 取消原因 | `航班时间变动` |
@@ -1379,21 +1428,64 @@ GET /api/v1/conversations/{conversationId}/messages?since={lastSeq}
 
 ### 8.1 状态定义（10 态，唯一一套 camelCase 枚举）
 
-| # | `status` | 中文 | `statusBadge` | 用户可执行操作 |
-|---|---|---|---|---|
-| 1 | `pendingPayment` | 待支付 | `pending` | 支付、取消 |
-| 2 | `pendingAccept` | 待接单 | `confirmed` | 取消、联系 |
-| 3 | `accepted` | 已接单 | `confirmed` | 取消、联系 |
-| 4 | `inService` | 服务中 | `ongoing` | 申请退款、联系 |
-| 5 | `pendingConfirm` | 待确认 | `review` | 确认完成、申请退款、联系 |
-| 6 | `completed` | 已完成 | `done` | 评价、再约 |
-| 7 | `cancelled` | 已取消 | `closed` | 再约、咨询（**终态**） |
-| 8 | `closed` | 已关闭 | `closed` | 再约、咨询（**终态**） |
-| 9 | `refunding` | 退款中 | `refund` | 查看进度、联系客服 |
-| 10 | `refunded` | 已退款 | `closed` | 再约（**终态**） |
+#### 订单状态的 4 个维度（各司其职，不要混用）
 
-> `cancelled` = 用户主动取消；`closed` = 系统 / 地陪侧关闭（超时未付、地陪拒单）。文案必须区分。
-> **不存在 snake_case 版本**，`statusCode` 字段已删除。
+| 维度 | 字段 | 用途 | 取值 |
+|---|---|---|---|
+| **语义身份** | `status` | 逻辑判断 / 埋点 / 读屏补充 | 10 个 camelCase 状态名（见下表）。**永不漂移**——它就是订单生命周期状态，与状态枚举 1:1 |
+| **中文文案** | `statusText` | 徽章文字（**必须与徽章同时渲染**，不能只靠颜色区分状态） | 待支付 / 待接单 / … |
+| **样式决策** | `statusBadge` | **CSS 类名后缀** → `class="dipi-badge--{{statusBadge}}"` | 见下方映射表。**客户端只消费它，不维护任何「状态 → 样式」映射表** |
+| **操作位** | `allowedActions[]` | 按钮显隐的**唯一权威**（6 个 `canUserXxx` 是便捷派生） | `pay` `cancel` `confirm` `refund` `contact` `review` |
+
+> 另有 `statusTone`（色弱 / 单色模式的第二重信息）：与徽章底色**同色系**，两个通道不得互相矛盾。
+>
+> **铁律：同一语义只允许一个权威来源。** `status` 是语义身份的唯一权威字段，
+> 不提供任何与它等价的同义键 —— 一个字段只有在**语义与另一个字段不同**时才值得存在：
+> `statusBadge`（视觉决策）≠ `status`（语义身份）→ 该拆；同义重复键 → 不该拆。
+>
+> **按钮显隐一律以 `allowedActions[]` 为准**，不要拿 `status` 自己推状态机。
+
+#### 完整映射表（唯一权威，服务端 `models/statusMap.js` 维护）
+
+> 依据：`docs/01-visual-design.md` v1.1 §6.10「视觉紧迫度 6 级」体系。
+
+| `status` | `statusText` | `statusBadge` | CSS 类 | `statusTone` | 徽章底色 / 文字 | 紧迫度 |
+|---|---|---|---|---|---|---|
+| `pendingPayment` | 待支付 | `pending` | `.dipi-badge--pending` | `warning` | warning-100 / warning-700 | ① 还没确认，有时限 |
+| `pendingAccept` | 待接单 | `pending` | `.dipi-badge--pending` | `warning` | warning-100 / warning-700 | ① 还没确认，有时限 |
+| `accepted` | 已接单 | `ongoing` | `.dipi-badge--ongoing` | `brand` | brand-100 / brand-700 | ② 已确认，等开始 |
+| `inService` | 服务中 | `ongoing` | `.dipi-badge--ongoing` | `brand` | brand-100 / brand-700 | ③ 正在进行 |
+| `pendingConfirm` | 待确认 | `review` | `.dipi-badge--review` | `accent` | accent-100 / accent-700 | ④ 等你行动（暖色＝行动召唤） |
+| `completed` | 已完成 | `done` | `.dipi-badge--done` | `success` | success-100 / success-700 | ⑤ 顺利完成 |
+| `cancelled` | 已取消 | `closed` | `.dipi-badge--closed` | `ink` | ink-100 / ink-500 | ⑥ 已结束 |
+| `closed` | 已关闭 | `closed` | `.dipi-badge--closed` | `ink` | ink-100 / ink-500 | ⑥ 已结束 |
+| `refunding` | 退款中 | `refunding` | `.dipi-badge--refunding` | `accent` | accent-100 / accent-700 | ④ 等你关注 |
+| `refunded` | 已退款 | `closed` | `.dipi-badge--closed` | `ink` | ink-100 / ink-500 | ⑥ 已结束 |
+
+#### 两条语义决策（Phase 1 v1.1 标注「勿回退」）
+
+1. **「已退款」用中性灰 `closed`，不用红** —— 它是**已完成的好结果**，用 error 红会让人误以为出了问题。
+2. **红色只留给「纠纷 / 异常」（`dispute`）** —— 退款中移到橙之后，error 红在整个 App 里只剩真异常。
+
+#### 徽章类白名单（订单状态用 8 个）
+
+| 类 | 用途 | 是否有订单状态映射 |
+|---|---|---|
+| `pending` `ongoing` `review` `refunding` `done` `closed` | 订单状态徽章 | ✅ 本表 6 个在用 |
+| `dispute` | 纠纷 / 异常（error 红） | 预留（当前 10 态无纠纷态） |
+| `refund` | `dispute` 的**已废弃兼容别名**（同色 error），保留以兼容既有白名单 | 预留 |
+| `confirmed` | **非订单类信息徽章**专用（系统通知 / 处理中 / 平台介入中） | ❌ 订单状态不再使用 |
+
+> **硬约束**
+> - `statusBadge` **必须**是 `components.wxss` 里真实存在的类名后缀。
+>   服务端不得下发未定义的 badge 值，否则徽章丢失底色、掉回默认样式。
+> - 服务端与客户端**双向夹逼**：服务端侧断言「每个 `statusBadge` 取值都能在 `components.wxss` 找到对应类」
+>   +「`STATUS_BADGE` 键集合恰好等于 10 个订单状态枚举」（见 `server/test/contract.test.js`）；
+>   客户端侧断言「白名单 ⇄ CSS 类名集合互为子集」（C11）。
+> - 多个状态**共用**同一个 badge（按视觉紧迫度归并），这是**有意设计**；语义靠 `status` + `statusText` 区分。
+> - **客户端只消费 `statusBadge`**，直接拼 `class="dipi-badge--{{statusBadge}}"`，
+>   **不维护任何「状态 → 样式」映射表**（那会重造第二套状态机）。
+> - `statusText` 必须与徽章**同时渲染**（色弱 / 单色模式可读性要求）。
 
 ### 8.2 合法迁移
 
@@ -1409,7 +1501,7 @@ GET /api/v1/conversations/{conversationId}/messages?since={lastSeq}
 | T08 | `accepted` | `start` | `inService` | 地陪 |
 | T09 | `accepted` | `cancel` | `refunding` | 用户（已支付，自动退款） |
 | T10 | `inService` | `finish` | `pendingConfirm` | 地陪结束服务 |
-| T11 | `inService` | `confirm` | `completed` | 用户直接确认完成 |
+| T11 | `inService` | `confirm` | `completed` | 用户直接确认完成（**兜底**，见下方 T24 说明） |
 | T12 | `inService` | `refund` | `refunding` | 用户 |
 | T13 | `pendingConfirm` | `confirm` | `completed` | 用户确认完成 |
 | T14 | `pendingConfirm` | `refund` | `refunding` | 用户 |
@@ -1417,6 +1509,14 @@ GET /api/v1/conversations/{conversationId}/messages?since={lastSeq}
 | T16 | `refunding` | `refund:approve` | `refunded` | 系统 / 地陪 |
 | T17 | `refunding` | `refund:reject` | **回到 `refundFromStatus`** | 系统 / 地陪 |
 | T18 | `cancelled` / `closed` / `refunded` | — | — | **终态** |
+| **T24** | `inService` | `confirm` | `completed` | **兜底确认**（与 T11 同一动作语义） |
+
+> **T24 · `inService` 兜底确认完成**
+> 地陪实际已结束服务但漏点「结束服务」时，用户不应被卡在「服务中」只能去申请退款 —— 那是个真实的死胡同。
+> 因此 `inService` 状态下用户也可直接 `confirm` → `completed`，交互与 `pendingConfirm` **完全相同**
+> （二次确认弹层「确认服务已完成？确认后金额将结算给地陪。」）。
+> 兜底确认后**仍适用 7 天售后窗口**（T18），地陪侧争议有出口。
+> 该迁移在服务端状态机中已实现（`inService → confirm → completed`）。
 
 **非法迁移一律返回 409（code `40901`）**，响应 `data` 带 `currentStatus` / `currentStatusText` / `allowedActions`，客户端应刷新该订单后重试。
 
@@ -1454,7 +1554,10 @@ totalAmount    = subtotalAmount - discountAmount
     - `slot_not_found` → message「该时段暂不可约，请选择其他时段」
   - 客户端收到后应提示并自动重选首个可约时段，**其余表单内容保留**。
 - **释放**：订单取消 / 关闭时释放该时段。
-- **核销粒度**：时段被核销是「服务项 + slotId」维度；不同地陪的同名时段互不影响。
+- **核销粒度**：时段被核销是「**地陪 + slotId**」维度 —— 地陪是**一个真人**，同一天同一时段只能陪一个人，
+  故其名下**所有服务项**共享同一批占用记录；`availableSlots[].available` 也按地陪级计算
+  （某时段被该地陪任一服务项占用 → 该地陪所有服务项的该时段都置 `false`）。
+  不同地陪的同名时段互不影响。
 
 ---
 

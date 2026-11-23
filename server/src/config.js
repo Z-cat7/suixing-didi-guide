@@ -42,7 +42,12 @@ const config = {
 
   /** Token 配置：HMAC-SHA256 自实现签名，无外部依赖 */
   token: {
-    /** 签名密钥。生产环境务必通过环境变量注入 */
+    /**
+     * 签名密钥。
+     * 🔴 生产部署必须用环境变量固定（如 TOKEN_SECRET=<32 字节随机串>）。
+     *    默认值是进程启动时随机生成的——服务一重启，所有已签发 token 立即全部失效，
+     *    用户被强制登出；多实例部署时各实例密钥不同，token 也无法互认。
+     */
     secret: process.env.TOKEN_SECRET || crypto.randomBytes(32).toString('hex'),
     /** token 有效期（秒），默认 7 天 */
     ttlSeconds: envNum('TOKEN_TTL_SECONDS', 7 * 24 * 60 * 60),

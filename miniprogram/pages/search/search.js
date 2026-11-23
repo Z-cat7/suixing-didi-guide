@@ -56,7 +56,7 @@ Page({
       availableWindows: [],
     },
     /** 排序 */
-    sortBy: 'default',
+    sortBy: 'recommend',
     sortOptions: SORT_OPTIONS,
 
     /** 结果列表 */
@@ -176,19 +176,20 @@ Page({
     // 参数名对齐最终契约：destination / minPrice / maxPrice / rating / sort（服务端单位：价格按「元」）
     // 同时带上别名，兼容服务端两种命名（destination|city、minPrice|priceMin、rating|minRating、sort|sortBy）
     const query = {
+      // 参数名严格对齐最终契约（docs/03-api-contract.md §4.3）
+      // ⚠️ 客户端**只发契约参数**，不主动传服务端的历史别名
+      //    （服务端的宽松兼容属于服务端单侧容错，不是契约的一部分）
       keyword: this.data.keyword,
       destination: filters.destination,
-      city: filters.destination,
+      // serviceType 永远是 camelCase 规范枚举（foodTour / cityWalk / …）
       serviceType: filters.serviceTypes.length ? filters.serviceTypes[0] : '',
+      // ⚠️ minPrice / maxPrice 的单位是**元**（与 filter-options 的 min/max 同口径）
+      //    响应体里的 xxxAmount 才是分 —— 提交时不要乘 100
       minPrice: priceRange ? priceRange.min : '',
       maxPrice: priceRange ? priceRange.max === null ? '' : priceRange.max : '',
-      priceMin: priceRange ? priceRange.min : '',
-      priceMax: priceRange ? priceRange.max === null ? '' : priceRange.max : '',
       rating: filters.rating === null ? '' : filters.rating,
-      minRating: filters.rating === null ? '' : filters.rating,
       availableWithin: filters.availableWithin,
       sort: this.data.sortBy,
-      sortBy: this.data.sortBy,
       page: this.data.page,
       pageSize: 20,
     };

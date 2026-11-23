@@ -39,34 +39,96 @@ const ORDER_STATUS_LIST = [
 ];
 
 /**
- * 订单状态 → 徽章样式类（纯视觉映射，来自 UX 规范 §A.3.3）
- * 注意：这里**不包含**任何按钮/操作语义。
+ * 订单徽章类名白名单（服务端 `statusBadge` 的实际取值集合）
+ * ---------------------------------------------------------------------------
+ * 这是**服务端 `models/statusMap.js` 的 STATUS_BADGE 会下发的值**，
+ * 与 `docs/03-api-contract.md` §8 映射表一一对应：
+ *   pendingPayment/pendingAccept → pending
+ *   accepted/inService           → ongoing
+ *   pendingConfirm               → review
+ *   completed                    → done
+ *   cancelled/closed/refunded    → closed
+ *   refunding                    → refunding
+ *
+ * ⚠️ 本表**只用于校验**（静态检查脚本断言「样式层必须能覆盖每一个」），
+ *    不做「状态 → 类名」的转换 —— 那是服务端职责。
  */
-const ORDER_STATUS_BADGE_CLASS = {
-  pendingPayment: 'dipi-badge--pending',
-  pendingAccept: 'dipi-badge--confirmed',
-  accepted: 'dipi-badge--confirmed',
-  inService: 'dipi-badge--ongoing',
-  pendingConfirm: 'dipi-badge--review',
-  completed: 'dipi-badge--done',
-  cancelled: 'dipi-badge--closed',
-  closed: 'dipi-badge--closed',
-  refunding: 'dipi-badge--refund',
-  refunded: 'dipi-badge--closed',
+const ORDER_STATUS_BADGE_WHITELIST = [
+  'pending',   // 待支付 / 待接单
+  'ongoing',   // 已接单 / 服务中
+  'review',    // 待确认
+  'done',      // 已完成
+  'closed',    // 已取消 / 已关闭 / 已退款
+  'refunding', // 退款中
+];
+
+/**
+ * 样式层存在、但服务端订单状态**不下发**的徽章类（非订单语义徽章）
+ * ---------------------------------------------------------------------------
+ * `.dipi-badge--confirmed` → 系统通知 / 处理中 / 平台介入中
+ * `.dipi-badge--dispute`   → 纠纷 / 异常
+ * `.dipi-badge--refund`    → `.dipi-badge--dispute` 的历史兼容别名（红）
+ * 保留它们不算漂移，但若出现**白名单与别名都没有**的类 → 说明样式层与契约层悄悄分叉了。
+ */
+const ORDER_STATUS_BADGE_ALIASES = ['confirmed', 'dispute', 'refund'];
+
+/** 徽章类名缺失时的兜底值（.dipi-badge--closed 一定存在） */
+const ORDER_STATUS_BADGE_FALLBACK = 'closed';
+
+/**
+ * `statusTone` 值域（7 值）
+ * ---------------------------------------------------------------------------
+ * 功能色语义，是**色弱 / 单色模式下的第二重信息**。
+ * 徽章本身仍必须带文字（不能只靠颜色区分状态）。
+ */
+const ORDER_STATUS_TONE_WHITELIST = [
+  'warning', 'info', 'brand', 'accent', 'success', 'ink', 'error',
+];
+
+/**
+ * 订单可用操作（allowedActions 取值域）
+ * ---------------------------------------------------------------------------
+ * 与 6 个 canUserXxx 布尔位**同源生成**（服务端的同一份 statusFlags）。
+ * 前端**优先读 allowedActions[]**，缺失才退化到布尔位；绝不做状态换算。
+ */
+const ORDER_ACTION = {
+  PAY: 'pay',
+  CANCEL: 'cancel',
+  CONFIRM: 'confirm',
+  REFUND: 'refund',
+  CONTACT: 'contact',
+  REVIEW: 'review',
+};
+
+/** 订单操作 → 6 个 canUserXxx 布尔位的键名映射（仅用于「读 allowedActions 缺失时退化」） */
+const ORDER_ACTION_FLAG = {
+  pay: 'canUserPay',
+  cancel: 'canUserCancel',
+  confirm: 'canUserConfirm',
+  refund: 'canUserRefund',
+  contact: 'canUserContact',
+  review: 'canUserReview',
 };
 
 /**
- * 未知状态的兜底徽章类（服务端新增状态时不至于白屏）
+ * 判断订单某操作是否可用
+ * ---------------------------------------------------------------------------
+ * 【铁律】**优先读服务端下发的 `allowedActions[]`**（权威数组）；
+ *         只有它缺失时，才退化到 6 个 `canUserXxx` 布尔位（与前者同源）。
+ *         前端**绝不做「状态 → 操作」的换算**。
+ * @param {object} order 订单对象
+ * @param {string} action 操作名（pay/cancel/confirm/refund/contact/review）
+ * @returns {boolean}
  */
-const ORDER_STATUS_FALLBACK_BADGE_CLASS = 'dipi-badge--closed';
-
-/**
- * 取订单徽章样式类
- * @param {string} status 订单状态
- * @returns {string} 样式类名
- */
-function getOrderBadgeClass(status) {
-  return ORDER_STATUS_BADGE_CLASS[status] || ORDER_STATUS_FALLBACK_BADGE_CLASS;
+function hasOrderAction(order, action) {
+  if (!order) return false;
+  const allowed = order.allowedActions;
+  if (Array.isArray(allowed)) {
+    return allowed.indexOf(action) >= 0;
+  }
+  // 退化路径：读布尔位
+  const flagKey = ORDER_ACTION_FLAG[action];
+  return flagKey ? !!order[flagKey] : false;
 }
 
 /** 服务类型枚举（小驼峰，与服务端契约一致） */
@@ -89,9 +151,12 @@ const SERVICE_TYPE_ITEMS = [
   { code: SERVICE_TYPE.ERRAND, name: '办事协助', iconName: 'errand' },
 ];
 
-/** 排序方式（与契约 sortBy 参数一致） */
+/**
+ * 排序方式（与契约 `sort` 查询参数一致）
+ * 值域：recommend | priceAsc | priceDesc | rating
+ */
 const SORT = {
-  DEFAULT: 'default',
+  RECOMMEND: 'recommend',
   PRICE_ASC: 'priceAsc',
   PRICE_DESC: 'priceDesc',
   RATING: 'rating',
@@ -99,7 +164,7 @@ const SORT = {
 
 /** 搜索页排序项 */
 const SORT_OPTIONS = [
-  { code: SORT.DEFAULT, label: '综合' },
+  { code: SORT.RECOMMEND, label: '综合' },
   { code: SORT.PRICE_ASC, label: '价格↑' },
   { code: SORT.PRICE_DESC, label: '价格↓' },
   { code: SORT.RATING, label: '评分' },
@@ -155,15 +220,35 @@ const ORDER_TAB = {
   REFUNDING: 'refunding',
 };
 
-/** 订单页 Tab 定义（label 为前端导航文案，不参与状态判定） */
+/**
+ * 订单页 Tab 定义（label 为前端导航文案，不参与状态判定）
+ * ---------------------------------------------------------------------------
+ * `statusQuery` 是**发给服务端的 status 查询参数**（逗号分隔的 camelCase 状态枚举）。
+ * ⚠️ 服务端只接受**状态枚举值**，不接受展示分桶名（如 `ongoing`）——
+ *    发错会拿到 422（"订单状态只能是：…"）。所以 Tab 必须带 statusQuery 映射。
+ */
 const ORDER_TABS = [
-  { code: ORDER_TAB.ALL, label: '全部' },
-  { code: ORDER_TAB.PENDING_PAYMENT, label: '待支付' },
-  { code: ORDER_TAB.ONGOING, label: '进行中' },
-  { code: ORDER_TAB.PENDING_CONFIRM, label: '待确认' },
-  { code: ORDER_TAB.COMPLETED, label: '已完成' },
-  { code: ORDER_TAB.REFUNDING, label: '退款' },
+  { code: ORDER_TAB.ALL, label: '全部', statusQuery: '' },
+  { code: ORDER_TAB.PENDING_PAYMENT, label: '待支付', statusQuery: 'pendingPayment' },
+  // 进行中 = accepted + inService（服务端按逗号分隔多状态过滤）
+  { code: ORDER_TAB.ONGOING, label: '进行中', statusQuery: 'accepted,inService' },
+  { code: ORDER_TAB.PENDING_CONFIRM, label: '待确认', statusQuery: 'pendingConfirm' },
+  { code: ORDER_TAB.COMPLETED, label: '已完成', statusQuery: 'completed' },
+  // 退款 = refunding + refunded
+  { code: ORDER_TAB.REFUNDING, label: '退款', statusQuery: 'refunding,refunded' },
 ];
+
+/**
+ * 取 Tab 对应的服务端 status 查询参数
+ * @param {string} tabCode Tab code
+ * @returns {string} 逗号分隔的状态枚举（全部 Tab 返回空串）
+ */
+function getOrderTabStatusQuery(tabCode) {
+  const found = ORDER_TABS.filter(function (t) {
+    return t.code === tabCode;
+  })[0];
+  return found ? found.statusQuery : '';
+}
 
 /** 退款原因（客户端采集，提交给服务端） */
 const REFUND_REASON = [
@@ -194,9 +279,9 @@ const CANCEL_REASON = [
  */
 const ORDER_STAT_BUCKETS = [
   { code: 'pendingPayment', label: '待支付', alias: '' },
-  { code: 'ongoing', label: '进行中', alias: '' },
+  { code: 'ongoing', label: '服务中', alias: '' },
   { code: 'pendingConfirm', label: '待确认', alias: '' },
-  { code: 'refunding', label: '已退款', alias: 'refunded' },
+  { code: 'refunded', label: '退款', alias: 'refunding' },
 ];
 
 /** 存储 key（统一 dipi: 前缀 + 冒号分层） */
@@ -237,9 +322,13 @@ const TAB_BAR_ITEMS = [
 module.exports = {
   ORDER_STATUS,
   ORDER_STATUS_LIST,
-  ORDER_STATUS_BADGE_CLASS,
-  ORDER_STATUS_FALLBACK_BADGE_CLASS,
-  getOrderBadgeClass,
+  ORDER_STATUS_BADGE_WHITELIST,
+  ORDER_STATUS_BADGE_ALIASES,
+  ORDER_STATUS_BADGE_FALLBACK,
+  ORDER_STATUS_TONE_WHITELIST,
+  ORDER_ACTION,
+  ORDER_ACTION_FLAG,
+  hasOrderAction,
   SERVICE_TYPE,
   SERVICE_TYPE_ITEMS,
   SORT,
@@ -251,6 +340,7 @@ module.exports = {
   WS_STATE,
   ORDER_TAB,
   ORDER_TABS,
+  getOrderTabStatusQuery,
   REFUND_REASON,
   CANCEL_REASON,
   ORDER_STAT_BUCKETS,

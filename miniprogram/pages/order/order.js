@@ -23,7 +23,18 @@ const api = require('../../utils/api');
 const storage = require('../../utils/storage');
 const ws = require('../../utils/ws');
 const format = require('../../utils/format');
-const { ROUTES, ORDER_TABS, ORDER_TAB, CANCEL_REASON, REFUND_REASON } = require('../../utils/constants');
+const {
+  ROUTES,
+  ORDER_TABS,
+  ORDER_TAB,
+  ORDER_ACTION,
+  ORDER_ACTION_FLAG,
+  ORDER_STATUS_BADGE_FALLBACK,
+  getOrderTabStatusQuery,
+  hasOrderAction,
+  CANCEL_REASON,
+  REFUND_REASON,
+} = require('../../utils/constants');
 
 /** 倒计时刷新间隔（毫秒） */
 const COUNTDOWN_INTERVAL = 1000;
@@ -180,7 +191,8 @@ Page({
     }
 
     const query = {
-      status: this.data.currentTab === ORDER_TAB.ALL ? '' : this.data.currentTab,
+      // status 必须是**状态枚举**（服务端不接受展示分桶名，发错会 422）
+      status: getOrderTabStatusQuery(this.data.currentTab),
       page: this.data.page,
       pageSize: 20,
     };
@@ -222,6 +234,10 @@ Page({
    * 【字段语义澄清】
    *   `scheduledAt` 是**服务端订单响应体里的展示字段**（服务端算好的服务开始时间），
    *   仅用于界面展示；**下单提交时提交的是 `slotId`**（时段稳定唯一标识），两者语义不同。
+   *
+   * 【样式与操作】
+   *   - `statusBadge` 由服务端下发 → 直接拼 `dipi-badge--{{statusBadge}}`，前端不映射
+   *   - `allowedActions[]` 由服务端下发 → 按钮显隐的唯一依据，前端不做状态换算
    * @param {object} order 订单
    * @returns {object}
    */
@@ -230,9 +246,14 @@ Page({
     const decorated = Object.assign({}, order, {
       totalYuan: format.amountToYuan(order.totalAmount),
       scheduledAtText: format.formatDateTime(order.scheduledAt),
+      // 服务端未下发 statusBadge 时兜底（.dipi-badge--closed 一定存在）
+      statusBadge: order.statusBadge || ORDER_STATUS_BADGE_FALLBACK,
+      // 按钮显隐的唯一依据：服务端下发的 allowedActions[]（缺失才退化到布尔位）
+      actions: self.resolveActions(order),
       countdownText: '',
     });
-    if (order.expireAt && order.status === 'pendingPayment') {
+    // 倒计时仅在「待支付」且未过期时显示（依据服务端下发的 expireAt + serverTime）
+    if (order.expireAt && hasOrderAction(order, ORDER_ACTION.PAY)) {
       decorated.countdownText = self.buildCountdown(order.expireAt, order.serverTime);
     }
     if (this.data.highlightOrderId && order.orderId === this.data.highlightOrderId) {
@@ -265,14 +286,14 @@ Page({
     const self = this;
     this.stopCountdown();
     if (!this.data.list.some(function (o) {
-      return o.status === 'pendingPayment' && o.expireAt;
+      return o.expireAt && hasOrderAction(o, ORDER_ACTION.PAY);
     })) {
       return;
     }
     this._countdownTimer = setInterval(function () {
       let expired = false;
       const list = self.data.list.map(function (order) {
-        if (order.status !== 'pendingPayment' || !order.expireAt) return order;
+        if (!order.expireAt || !hasOrderAction(order, ORDER_ACTION.PAY)) return order;
         const text = self.buildCountdown(order.expireAt, order.serverTime);
         if (!text) {
           // 到期 → 本地乐观置 closed（以服务端返回为准）
@@ -280,6 +301,7 @@ Page({
           return Object.assign({}, order, {
             status: 'closed',
             statusText: '已关闭',
+            statusBadge: 'closed',
             countdownText: '',
           });
         }
@@ -340,15 +362,41 @@ Page({
       return Object.assign({}, t, { atText: format.formatDateTime(t.at) });
     });
     return Object.assign({}, order, {
-      priceYuan: format.amountToYuan(order.priceAmount),
+      // 金额：unitPriceAmount 单价 / subtotalAmount 小计 / totalAmount 总额（全部整数分）
+      unitPriceYuan: format.amountToYuan(order.unitPriceAmount),
+      subtotalYuan: format.amountToYuan(order.subtotalAmount),
       extraYuan: format.amountToYuan(order.extraAmount),
       discountYuan: format.amountToYuan(order.discountAmount),
       totalYuan: format.amountToYuan(order.totalAmount),
       scheduledAtText: format.formatDateTime(order.scheduledAt),
       timeline: timeline,
-      // 详情页是否有实心主按钮
-      hasPrimaryAction: !!(order.canUserPay || order.canUserConfirm || order.canUserReview),
+      // 服务端未下发 statusBadge 时兜底
+      statusBadge: order.statusBadge || ORDER_STATUS_BADGE_FALLBACK,
+      // 按钮显隐的唯一依据：服务端下发的 allowedActions[]（缺失才退化到布尔位）
+      actions: this.resolveActions(order),
+      // 详情页是否有实心主按钮（依据 allowedActions）
+      hasPrimaryAction:
+        hasOrderAction(order, ORDER_ACTION.PAY) ||
+        hasOrderAction(order, ORDER_ACTION.CONFIRM) ||
+        hasOrderAction(order, ORDER_ACTION.REVIEW),
     });
+  },
+
+  /**
+   * 解析订单可用操作
+   * ---------------------------------------------------------------------------
+   * 【铁律】**优先读服务端下发的 `allowedActions[]`**（权威数组）；
+   *         缺失才退化到 6 个 `canUserXxx` 布尔位（与前者同源）。
+   *         前端**绝不做「状态 → 操作」的换算**。
+   * @param {object} order 订单对象
+   * @returns {object} { pay, cancel, confirm, refund, contact, review }
+   */
+  resolveActions: function (order) {
+    const actions = {};
+    Object.keys(ORDER_ACTION_FLAG).forEach(function (action) {
+      actions[action] = hasOrderAction(order, action);
+    });
+    return actions;
   },
 
   /* ---------------- 列表交互 ---------------- */
@@ -445,7 +493,8 @@ Page({
     api
       .getOrder(orderId)
       .then(function (order) {
-        if (!order || order.status !== 'pendingPayment') {
+        // 依据服务端下发的 allowedActions 判断是否仍可支付（前端不做状态换算）
+        if (!order || !hasOrderAction(order, ORDER_ACTION.PAY)) {
           wx.showToast({ title: '订单状态已变化', icon: 'none', duration: 2000 });
           self.refreshAfterAction(orderId);
           return;

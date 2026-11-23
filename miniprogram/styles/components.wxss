@@ -709,12 +709,32 @@
   background-color: var(--dipi-ink-100);
   color: var(--dipi-ink-500);
 }
+/* --------------------------------------------------------------------------
+ * 订单状态徽章 —— 按「视觉紧迫度」分 6 级（详见 docs/01-visual-design.md §6.10）
+ *
+ * 类名 = 视觉层级，不是业务状态名；同一层级可对应多个业务状态，
+ * 靠徽章文案区分（如 pending 同时承载「待支付」「待接单」）。
+ *
+ * ① pending   还没确认，有时限   琥珀 warning
+ * ② ongoing   已确认 / 进行中     品牌绿 brand
+ * ③ review    等你确认/验收      橙 accent   ← 行动召唤
+ * ④ refunding 等你关注（退款中）  橙 accent   ← 行动召唤
+ * ⑤ done      顺利完成           绿 success
+ * ⑥ closed    已结束（取消/关闭/已退款）中性灰 ink
+ * ⑦ dispute   纠纷 / 异常        红 error    ← 唯一红色状态
+ * ------------------------------------------------------------------------ */
 .dipi-badge--pending   { background-color: var(--dipi-warning-100); color: var(--dipi-warning-700); }
+/* confirmed（info 蓝）不再用于任何订单状态（已接单/服务中统一走 ongoing 品牌绿）。
+   保留给非订单类信息徽章：系统通知 / 处理中 / 平台介入中。 */
 .dipi-badge--confirmed { background-color: var(--dipi-info-100);    color: var(--dipi-info-700); }
 .dipi-badge--ongoing   { background-color: var(--dipi-brand-100);   color: var(--dipi-brand-700); }
 .dipi-badge--review    { background-color: var(--dipi-accent-100);  color: var(--dipi-accent-700); }
+.dipi-badge--refunding { background-color: var(--dipi-accent-100);  color: var(--dipi-accent-700); }
 .dipi-badge--done      { background-color: var(--dipi-success-100); color: var(--dipi-success-700); }
 .dipi-badge--closed    { background-color: var(--dipi-ink-100);     color: var(--dipi-ink-500); }
+.dipi-badge--dispute   { background-color: var(--dipi-error-100);   color: var(--dipi-error-700); }
+/* 兼容别名：语义已迁移到 .dipi-badge--dispute（纠纷/异常）。
+   注意：--refund（纠纷，红）与 --refunding（退款中，橙）语义相反，新代码请用 dispute。 */
 .dipi-badge--refund    { background-color: var(--dipi-error-100);   color: var(--dipi-error-700); }
 /* 实心徽章（仅顶部强调条使用） */
 .dipi-badge--solid {
@@ -768,6 +788,13 @@
   margin-top: var(--dipi-space-4);
   padding-top: var(--dipi-space-4);
   border-top: 1rpx solid var(--dipi-ink-200);
+}
+/* 同一张订单卡内已有「行动级橙徽章」（待确认 / 退款中）时，
+   价格降级为正文色，避免一卡两橙互相抢注意力（原则 1：一个视觉主角）。
+   用法：<view class="dipi-order-card dipi-order-card--has-action-badge"> */
+.dipi-order-card--has-action-badge .dipi-price__value,
+.dipi-order-card--has-action-badge .dipi-price__symbol {
+  color: var(--dipi-ink-900);
 }
 
 /* ==========================================================================

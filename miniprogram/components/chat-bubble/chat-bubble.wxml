@@ -18,7 +18,7 @@
   >
     <view class="chat-bubble__order-head">
       <text class="chat-bubble__order-title">{{orderSummary.serviceName}}</text>
-      <order-status-badge status="{{orderSummary.status}}" status-text="{{orderSummary.statusText}}" size="sm" />
+      <order-status-badge status-badge="{{orderSummary.statusBadge}}" status-text="{{orderSummary.statusText}}" size="sm" />
     </view>
     <view class="chat-bubble__order-meta">
       <text class="chat-bubble__order-no">订单号 {{orderSummary.orderNo}}</text>

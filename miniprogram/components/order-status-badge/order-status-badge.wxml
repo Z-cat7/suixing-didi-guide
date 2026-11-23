@@ -1,7 +1,9 @@
 <!--
   order-status-badge · 订单状态徽章
-  【纪律】徽章必须带文字（不能只靠颜色传达状态）；statusText 由服务端下发
+  【纪律】样式决策由服务端下发 statusBadge，本组件**不做任何「状态 → 类名」映射**
+  徽章必须同时渲染 statusText（不能只靠颜色区分状态，色弱可读性 A-07）
+  白名单兜底由组件内 ORDER_STATUS_BADGE_WHITELIST 完成（未知值 → closed）
 -->
-<view class="dipi-badge {{badgeClass}} {{size === 'sm' ? 'dipi-badge--sm' : ''}}" aria-hidden="true">
+<view class="dipi-badge {{size === 'sm' ? 'dipi-badge--sm' : ''}} dipi-badge--{{badgeClass}}" aria-hidden="true">
   {{statusText}}
 </view>
