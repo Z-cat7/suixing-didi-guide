@@ -10,7 +10,9 @@
 
 1. 打开 **微信开发者工具** → 导入项目
 2. **目录**选择本目录：`dipi/miniprogram/`
-3. **AppID** 选择「测试号」或使用占位 `touristicappid`
+3. **AppID**：`project.config.json` 已预填正式 AppID `wxa8c5b4d133da933a`，导入时会自动读取；
+   若要上传体验版，需确保开发者工具登录的微信账号是该小程序的开发者/体验者。
+   仅本地预览也可临时改用「测试号」（占位 `touristicappid`），但测试号**不能上传体验版**。
 4. **基础库** 选择 **≥ 2.32.0**（依赖 ARIA 属性与 `wx.getWindowInfo`）
 
 > 也可以直接导入 `dipi/` 目录 —— `project.config.json` 已把 `miniprogramRoot` 指向 `miniprogram/`。
